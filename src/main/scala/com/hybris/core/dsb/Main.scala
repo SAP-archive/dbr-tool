@@ -15,17 +15,21 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import cats.data.Xor
+import cats.implicits._
 import com.hybris.core.dsb.backup.BackupService
 import com.hybris.core.dsb.config._
 import com.hybris.core.dsb.document.DefaultDocumentServiceClient
 import com.hybris.core.dsb.file.FileOps
-import com.hybris.core.dsb.model.ClientTenant
+import com.hybris.core.dsb.model.Result.Result
+import com.hybris.core.dsb.model.{ClientTenant, Result}
+import com.hybris.core.dsb.oauth.OAuthClient
 
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 /**
- * Main class of backup tool.
- */
+  * Main class of backup tool.
+  */
 object Main extends App with Cli with FileConfig with AppConfig with FileOps {
 
   private def run(): Unit = {
@@ -59,37 +63,48 @@ object Main extends App with Cli with FileConfig with AppConfig with FileOps {
 
     import system.dispatcher
 
-    val credentials = prepareBasicHttpCredentials(documentHttpCredentials)
+    val oauthClient = new OAuthClient(oauthUrl(cliConfig.env), clientId, clientSecret, scopes)
 
-    val documentServiceClient = new DefaultDocumentServiceClient(documentUrl(cliConfig.env), credentials)
+    val token = getOAuthToken(cliConfig.env, oauthClient)
 
-    val backupJob = new BackupService(documentServiceClient,
-      cliConfig.destinationDir, summaryFileName)
+    token.value.onSuccess {
+      case Xor.Right(token) ⇒
+        val documentServiceClient = new DefaultDocumentServiceClient(documentUrl(cliConfig.env), token)
 
-    val cts = backupConfig.tenants.map(t => ClientTenant(cliConfig.client, t.tenant, t.types))
+        val backupJob = new BackupService(documentServiceClient,
+          cliConfig.destinationDir, summaryFileName)
 
-    backupJob.runBackup(cts) onComplete {
-      case Success(_) =>
-        Console.out.println("Backup done successfully")
-        Http().shutdownAllConnectionPools() onComplete { _ =>
-          materializer.shutdown()
-          system.terminate()
+        val cts = backupConfig.tenants.map(t => ClientTenant(cliConfig.client, t.tenant, t.types))
+
+        backupJob.runBackup(cts) onComplete {
+          case Success(_) =>
+            Console.out.println("Backup done successfully")
+            Http().shutdownAllConnectionPools() onComplete { _ =>
+              materializer.shutdown()
+              system.terminate()
+            }
+
+          case Failure(ex) =>
+            Console.out.println("Backup failed with error: " + ex.getMessage)
+            Http().shutdownAllConnectionPools() onComplete { _ =>
+              materializer.shutdown()
+              system.terminate()
+            }
         }
 
-      case Failure(ex) =>
-        Console.out.println("Backup failed with error: " + ex.getMessage)
-        Http().shutdownAllConnectionPools() onComplete { _ =>
-          materializer.shutdown()
-          system.terminate()
-        }
+      case Xor.Left(error) ⇒
+        Console.out.println("Could not start generating backup. Error: " + error.getMessage)
     }
   }
 
-  private def prepareBasicHttpCredentials(credentials: String): Option[(String, String)] = {
-    if (credentials.trim.isEmpty) None
-    else {
-      val idx = credentials.indexOf(":")
-      if (idx == -1) None else Some((credentials.substring(0, idx), credentials.substring(idx + 1)))
+  private def getOAuthToken(env: String, oauthClient: OAuthClient)(implicit ec: ExecutionContext): Result[Option[String]] = {
+
+    env match {
+      case "local" ⇒ Result.success[Option[String]](None)
+
+      case e ⇒
+        val result: Result[Option[String]] = oauthClient.getToken.map(Option(_))
+        result
     }
   }
 

@@ -13,7 +13,7 @@ package com.hybris.core.dsb.document
 
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
-import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials}
+import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
@@ -63,7 +63,7 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
     "get types with basic authorization" in {
 
       // given
-      val client = new DefaultDocumentServiceClient("http://localhost:9876", Some(("user", "pass")))
+      val client = new DefaultDocumentServiceClient("http://localhost:9876", Some("token"))
 
       // when
       val types = client.getTypes("client", "tenant3").futureValue
@@ -74,8 +74,8 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
     }
   }
 
-  def extractCredentials: PartialFunction[HttpHeader, (String, String)] = {
-    case Authorization(BasicHttpCredentials(username, password)) => (username, password)
+  def extractToken: PartialFunction[HttpHeader, String] = {
+    case Authorization(OAuth2BearerToken(token)) => token
   }
 
   val route =
@@ -116,9 +116,9 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
         get {
           headerValueByName("hybris-client") { client =>
             headerValueByName("hybris-tenant") { tenant =>
-              headerValuePF(extractCredentials) { credentials =>
-                (client, tenant, credentials._1, credentials._2) match {
-                  case ("client", "tenant3", "user", "pass") =>
+              headerValuePF(extractToken) { token =>
+                (client, tenant, token) match {
+                  case ("client", "tenant3", "token") =>
                     complete(HttpEntity(ContentTypes.`application/json`,
                       """
                         |{

@@ -11,9 +11,14 @@
 */
 package com.hybris.core.dsb.model
 
+
+sealed abstract class AppError(message: String) {
+  def getMessage: String = message
+}
+
 /**
- * Internal error of application.
- *
- * @param message with information about the error.
- */
-case class InternalAppError(message: String)
+  * Internal error of application.
+  *
+  * @param message with information about the error.
+  */
+case class InternalAppError(message: String) extends AppError(message)

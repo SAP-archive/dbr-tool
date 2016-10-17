@@ -37,6 +37,7 @@ libraryDependencies ++= {
     "io.circe" %% "circe-parser" % circeVersion,
 
     "org.typelevel" %% "cats" % "0.7.2",
+    "com.ironcorelabs" %% "cats-scalatest" % "1.1.2" % "test",
 
     // configuration
     "com.typesafe" % "config" % "1.3.1",
