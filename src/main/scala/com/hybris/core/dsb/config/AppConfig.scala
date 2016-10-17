@@ -13,6 +13,8 @@ package com.hybris.core.dsb.config
 
 import com.typesafe.config.ConfigFactory
 
+import scala.collection.JavaConverters._
+
 /**
  * Application's main configuration, read from application.conf.
  */
@@ -25,5 +27,7 @@ trait AppConfig {
   def documentUrl(env: String): String = config.getString(s"environments.$env.document-url")
 
   val documentHttpCredentials = config.getString("document-http-credentials")
+
+  val environments = config.getList("environments.keys").unwrapped().asScala.toList
 
 }
