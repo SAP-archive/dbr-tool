@@ -65,11 +65,11 @@ object Main extends App with Cli with FileConfig with AppConfig with FileOps {
 
     val oauthClient = new OAuthClient(oauthUrl(cliConfig.env), clientId, clientSecret, scopes)
 
-    val token = getOAuthToken(cliConfig.env, oauthClient)
+    val getTokenResult = getOAuthToken(cliConfig.env, oauthClient).value
 
-    token.value.onSuccess {
-      case Xor.Right(token) ⇒
-        val documentServiceClient = new DefaultDocumentServiceClient(documentUrl(cliConfig.env), token)
+    getTokenResult.onSuccess {
+      case Xor.Right(t) ⇒
+        val documentServiceClient = new DefaultDocumentServiceClient(documentUrl(cliConfig.env), t)
 
         val backupJob = new BackupService(documentServiceClient,
           cliConfig.destinationDir, summaryFileName)
@@ -95,6 +95,7 @@ object Main extends App with Cli with FileConfig with AppConfig with FileOps {
       case Xor.Left(error) ⇒
         Console.out.println("Could not start generating backup. Error: " + error.getMessage)
     }
+
   }
 
   private def getOAuthToken(env: String, oauthClient: OAuthClient)(implicit ec: ExecutionContext): Result[Option[String]] = {
