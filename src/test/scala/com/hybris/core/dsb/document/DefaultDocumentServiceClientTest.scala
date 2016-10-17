@@ -60,13 +60,26 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
       result mustBe """[{"doc":1},{"doc":2}]"""
     }
 
-    "get types with basic authorization" in {
+    "get types with authorization token" in {
 
       // given
       val client = new DefaultDocumentServiceClient("http://localhost:9876", Some("token"))
 
       // when
       val types = client.getTypes("client", "tenant3").futureValue
+
+      // then
+      types must contain theSameElementsAs List("type1", "type2")
+
+    }
+
+    "get types without authorization when local mode" in {
+
+      // given
+      val client = new DefaultDocumentServiceClient("http://localhost:9876", None)
+
+      // when
+      val types = client.getTypes("client", "tenant4").futureValue
 
       // then
       types must contain theSameElementsAs List("type1", "type2")
@@ -134,7 +147,32 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
             }
           }
         }
+      } ~
+      path("tenant4" / "client") {
+        get {
+          headerValueByName("hybris-client") { client =>
+            headerValueByName("hybris-tenant") { tenant =>
+              optionalHeaderValueByName("Authorization") { token ⇒
+                (client, tenant, token) match {
+                  case ("client", "tenant4", None) =>
+                    complete(HttpEntity(ContentTypes.`application/json`,
+                      """
+                        |{
+                        |  "types" : ["type1", "type2"]
+                        |}
+                      """.
+                        stripMargin))
+
+
+                  case _ ⇒
+                    complete(StatusCodes.BadRequest)
+                }
+              }
+            }
+          }
+        }
       }
+
 
   var binding: ServerBinding = _
 

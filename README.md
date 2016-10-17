@@ -1,6 +1,6 @@
 # Document Service Backup Tool
 
-Document service backup tool (`dsb`) allows to backup data from Document service
+Document service backup restore tool (`dsb`) allows to backup data from Document service
 
 ## Usage
 
@@ -17,12 +17,13 @@ parameters:
 -	`client` - name of the client for whom the operation is performed
 -	`destination_dir` - destination folder where output files will be stored
 
-Backup requires `DOCUMENT_HTTP_CREDENTIALS` environment variable to be set with appropriate basic auth credential.
+Backup requires `CLIENT_ID` and `CLIENT_SECRET` environment variable to be set with appropriate auth credentials for getting access token.
 
 example:
 
 ```
-$ export DOCUMENT_HTTP_CREDENTIALS=<setme>
+$ export CLIENT_ID=<setme>
+$ export CLIENT_SECRET=<setme>
 
 $ dsb backup --env us-prod  --config config.json --client hybris.product --out /tmp/hybris_product_backup
 ```

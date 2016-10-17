@@ -85,7 +85,10 @@ class OAuthClientTest extends BaseCoreTest with XorValues {
 
       "succeed with correct response and scopes" in {
 
-        val oAuthActor = new OAuthClient("http://localhost:8999/hybris/oauth2/v1/token", "clientId", "clientSecret", List("hybris.media_manage", "hybris.media_view"))
+        val oAuthActor = new OAuthClient("http://localhost:8999/hybris/oauth2/v1/token",
+          "clientId",
+          "clientSecret",
+          List("hybris.media_manage", "hybris.media_view"))
 
         whenReady(oAuthActor.getToken.value) { result ⇒
           result.value mustBe "020-b9ea81fd-9518-4fcb-b33d-894c9048dd39"

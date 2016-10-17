@@ -27,8 +27,14 @@ import io.circe.generic.semiauto._
 
 import scala.concurrent.{ExecutionContext, Future}
 
+
 trait OAuth {
 
+  /**
+    * Accesses the OAuth service and gets valid token.
+    *
+    * @return token.
+    */
   def getToken: Result[String]
 
 }
@@ -55,6 +61,7 @@ class OAuthClient(oauthUri: String, clientId: String, clientSecret: String, scop
       .flatMap {
         case response if response.status.isSuccess() ⇒
           Unmarshal(response).to[TokenResponse].map(r ⇒ r.access_token.right[AppError])
+
         case response ⇒
           Future.successful(InternalAppError(s"Failed to get token: ${response.status} $oauthUri").left)
       }
