@@ -15,6 +15,8 @@ import com.typesafe.config.ConfigFactory
 import collection.JavaConversions._
 
 
+import scala.collection.JavaConverters._
+
 /**
  * Application's main configuration, read from application.conf.
  */
@@ -33,5 +35,7 @@ trait AppConfig {
   val clientSecret = config.getString("api.client.secret")
 
   val scopes = config.getStringList("api.scopes").toList
+
+  val environments = config.getList("environments.keys").unwrapped().asScala.toList
 
 }

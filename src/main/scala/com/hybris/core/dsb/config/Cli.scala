@@ -19,31 +19,43 @@ import com.hybris.core.dsb.model.InternalAppError
 /**
  * Functions for command line interface.
  */
-trait Cli {
+trait Cli extends AppConfig {
 
-  private val parser = new scopt.OptionParser[CliConfig]("backup") {
-    head("backup", "0.0.1")
+  private val allEnvironments = environments.mkString(", ")
+
+  private val parser = new scopt.OptionParser[CliConfig]("dsr") {
+    head("dsr", "0.0.1")
 
     opt[String]("env")
       .action((env, cfg) => cfg.copy(env = env))
-      .text("environment (us-prod|us-stage|eu)")
+      .text(s"environment, available options: $allEnvironments")
       .required()
-
-    opt[String]("config")
-      .action((cf, cfg) => cfg.copy(configFile = cf))
-      .text("path to configuration file")
-      .required()
+      .validate { env =>
+        if (environments.contains(env) || env == "local") success else failure(s"unknown environment '$env'")
+      }
 
     opt[String]("client")
       .action((cl, cfg) => cfg.copy(client = cl))
       .text("hybris client")
       .required()
 
-    opt[String]("out")
-      .action((dstDir, cfg) => cfg.copy(destinationDir = dstDir))
-      .text("destination folder")
-      .required()
+    note("")
 
+    cmd("backup")
+      .action((_, cfg) => cfg.copy(command = "backup"))
+      .children {
+
+        opt[String]("config")
+          .action((cf, cfg) => cfg.copy(configFile = cf))
+          .text("path to configuration file for backup")
+          .required()
+
+        opt[String]("out")
+          .action((dstDir, cfg) => cfg.copy(destinationDir = dstDir))
+          .text("destination folder")
+          .required()
+
+      }
   }
 
   def readCliConfig(args: Array[String]): Option[CliConfig] = {

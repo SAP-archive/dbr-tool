@@ -11,7 +11,8 @@
 */
 package com.hybris.core.dsb.config
 
-case class CliConfig(env: String = "",
+case class CliConfig(command: String = "",
+                     env: String = "",
                      configFile: String = "",
                      client: String = "",
                      destinationDir: String = "")
