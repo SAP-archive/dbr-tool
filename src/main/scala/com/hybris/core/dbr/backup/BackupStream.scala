@@ -19,7 +19,7 @@ import akka.stream.scaladsl.{FileIO, Flow}
 import akka.{Done, NotUsed}
 import better.files.File
 import com.hybris.core.dbr.document.DocumentServiceClient
-import com.hybris.core.dbr.model.{ClientTenant, ClientTenantType, TypeBackupData, TypeBackupResult}
+import com.hybris.core.dbr.model._
 import io.circe._
 import io.circe.generic.semiauto._
 import io.circe.syntax.EncoderOps
@@ -36,7 +36,7 @@ trait BackupStream {
 
   val DataParallelism = 1
 
-  implicit val ble: Encoder[TypeBackupResult] = deriveEncoder
+  implicit val typeBackupResultEncoder: Encoder[BackupTypeResult] = deriveEncoder
 
   def addTypes(documentServiceClient: DocumentServiceClient)
               (implicit executionContext: ExecutionContext): Flow[ClientTenant, ClientTenant, NotUsed] = {
@@ -49,40 +49,40 @@ trait BackupStream {
       }
   }
 
-  val flattenTypes: Flow[ClientTenant, ClientTenantType, NotUsed] = {
+  val flattenTypes: Flow[ClientTenant, BackupType, NotUsed] = {
     Flow[ClientTenant]
       .mapConcat {
         case ClientTenant(client, tenant, Some(types)) if types.nonEmpty =>
-          types.map(`type` => ClientTenantType(client, tenant, `type`))
+          types.map(`type` => BackupType(client, tenant, `type`))
         case _ =>
           List()
       }
   }
 
   def addDocuments(documentServiceClient: DocumentServiceClient)
-                  (implicit executionContext: ExecutionContext): Flow[ClientTenantType, TypeBackupData, NotUsed] = {
-    Flow[ClientTenantType]
-      .mapAsync(DataParallelism) { ctt =>
-        documentServiceClient.getDocuments(ctt.client, ctt.tenant, ctt.`type`)
+                  (implicit executionContext: ExecutionContext): Flow[BackupType, BackupTypeData, NotUsed] = {
+    Flow[BackupType]
+      .mapAsync(DataParallelism) { bt =>
+        documentServiceClient.getDocuments(bt.client, bt.tenant, bt.`type`)
           .map { data =>
-            TypeBackupData(ctt.client, ctt.tenant, ctt.`type`, data)
+            BackupTypeData(bt.client, bt.tenant, bt.`type`, data)
           }
       }
   }
 
   def writeToFiles(destinationDir: String)
                   (implicit executionContext: ExecutionContext,
-                   materializer: Materializer): Flow[TypeBackupData, TypeBackupResult, NotUsed] = {
-    Flow[TypeBackupData]
-      .mapAsync(DataParallelism) { tbd =>
+                   materializer: Materializer): Flow[BackupTypeData, BackupTypeResult, NotUsed] = {
+    Flow[BackupTypeData]
+      .mapAsync(DataParallelism) { btd =>
         val fileName = UUID.randomUUID().toString + ".json"
         val path = Paths.get(s"$destinationDir/$fileName")
 
-        tbd.data.runWith(FileIO.toPath(path))
+        btd.data.runWith(FileIO.toPath(path))
           .flatMap { ioResult =>
             ioResult.status match {
               case Success(Done) =>
-                Future.successful(TypeBackupResult(tbd.client, tbd.tenant, tbd.`type`, fileName))
+                Future.successful(BackupTypeResult(btd.client, btd.tenant, btd.`type`, fileName))
               case Failure(ex) =>
                 Future.failed(ex)
             }
@@ -90,9 +90,9 @@ trait BackupStream {
       }
   }
 
-  def writeSummary(destinationDir: String, fileName: String): Flow[TypeBackupResult, Done, NotUsed] = {
-    Flow[TypeBackupResult]
-      .fold(List[TypeBackupResult]())((acc, tbr) => acc :+ tbr)
+  def writeSummary(destinationDir: String, fileName: String): Flow[BackupTypeResult, Done, NotUsed] = {
+    Flow[BackupTypeResult]
+      .fold(List[BackupTypeResult]())((acc, btr) => acc :+ btr)
       .map { summary =>
         val file = File(s"$destinationDir/$fileName")
         file.overwrite(summary.asJson.spaces4)

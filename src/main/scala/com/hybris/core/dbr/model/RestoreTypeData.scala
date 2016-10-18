@@ -9,17 +9,6 @@
  * Information and shall use it only in accordance with the terms of the
  * license agreement you entered into with hybris.
  */
-package com.hybris.core.dbr.restore
+package com.hybris.core.dbr.model
 
-import java.io.File
-
-import scala.io.Source
-
-trait FileUtils {
-
-  def readFile(path: String): String = {
-    val fileSource = Source.fromFile(new File(path))
-    try fileSource.mkString finally fileSource.close()
-  }
-
-}
+case class RestoreTypeData(client: String, tenant: String, `type`: String, document: String)

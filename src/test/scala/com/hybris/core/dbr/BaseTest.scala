@@ -15,6 +15,8 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 
+import scala.util.Random
+
 trait BaseTest
   extends WordSpecLike
   with MustMatchers
@@ -24,4 +26,5 @@ trait BaseTest
   with MockFactory
   with BeforeAndAfterAll {
 
+  def randomName = Random.alphanumeric take 10 mkString
 }

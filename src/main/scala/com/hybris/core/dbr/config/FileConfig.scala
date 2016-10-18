@@ -11,15 +11,13 @@
 */
 package com.hybris.core.dbr.config
 
-import better.files._
 import cats.data.Xor
-import cats.implicits._
 import com.hybris.core.dbr.config.FileConfig._
+import com.hybris.core.dbr.file.FileOps._
 import com.hybris.core.dbr.model.InternalAppError
-import com.hybris.core.dbr.restore.model.OwnerInfo
 import io.circe._
 import io.circe.generic.semiauto._
-import io.circe.parser._
+
 
 /**
  * Functions to read configuration from user provided JSONs.
@@ -29,41 +27,45 @@ trait FileConfig {
   /**
    * Reads configuration for backup operation.
    *
-   * @param appConfig command line configuration
-   * @return combined command line configuration and backup configuration
+   * @param path command line configuration
+   * @return backup configuration
    */
-  def readBackupConfig(appConfig: CliConfig): Xor[InternalAppError, (CliConfig, BackupConfig)] = {
-    val file = File(appConfig.configFile)
+  def readBackupConfig(path: String): Xor[InternalAppError, BackupConfig] = {
+    readFileAs[BackupConfig](path)
+      .leftMap(error => convertToInternalAppError(error, path))
 
-    if (file.exists) {
-      parse(file.contentAsString)
-        .flatMap(json => json.as[BackupConfig])
-        .leftMap(error => InternalAppError("Failed to decode configuration file" + error.getMessage))
-        .map(backupConfig => (appConfig, backupConfig))
-    } else {
-      InternalAppError(s"Configuration file '${appConfig.configFile}' not found").left
+  }
+
+  /**
+   * Reads configuration for restorer operation
+   *
+   * @param path command line configuration
+   * @return restore configuration
+   */
+  def readRestoreConfig(path: String): Xor[InternalAppError, RestoreConfig] = {
+    readFileAs[List[RestoreTypeConfig]](path)
+      .map(types => RestoreConfig(types))
+      .leftMap(error => convertToInternalAppError(error, path))
+  }
+
+  private def convertToInternalAppError(fileError: FileError, path: String): InternalAppError = {
+    fileError match {
+      case FileNotFoundError(_) =>
+        InternalAppError(s"Failed to read configuration from '$path', file not found")
+
+      case FileParsingError(message) =>
+        InternalAppError(s"Failed to parse configuration from '$path', error: $message")
+
+      case other =>
+        InternalAppError(s"Failed to read configuration from '$path', error: ${other.getMessage}")
     }
   }
 
-  // TODO - clean me
-  def getRestoreConfig(configFile: String): List[OwnerInfo] = {
-    val fileContents = File(configFile).contentAsString
-
-    val json = parse(fileContents).getOrElse(Json.Null)
-
-    json.as[List[OwnerInfo]].value match {
-      case Xor.Right(result) ⇒
-        result
-      case Xor.Left(e) ⇒
-        //        logger.error(s"Error parsing $configFile: ${e.message}")
-        Nil
-    }
-  }
 }
 
 object FileConfig {
   implicit val backupConfigDecoder: Decoder[BackupConfig] = deriveDecoder
   implicit val backupTenantConfigDecoder: Decoder[BackupTenantConfig] = deriveDecoder
 
-  implicit val ownerInfoDecoder: Decoder[OwnerInfo] = Decoder.forProduct4("client", "tenant", "type", "file")(OwnerInfo.apply)
+  implicit val restoreTypeConfig: Decoder[RestoreTypeConfig] = deriveDecoder
 }

@@ -9,13 +9,15 @@
 * Information and shall use it only in accordance with the terms of the
 * license agreement you entered into with hybris.
 */
-package com.hybris.core.dbr.model
+package com.hybris.core.dbr.restore
 
-/**
- * Base element of backup stream.
- *
- * @param client name of a client
- * @param tenant name of a tenant
- * @param `type` name of a type
- */
-case class ClientTenantType(client: String, tenant: String, `type`: String)
+import cats.data.Xor
+import com.hybris.core.dbr.file.FileOps.{FileError, _}
+import io.circe.Json
+
+trait RestoreFileOps {
+
+  def readDocuments(path: String): Xor[FileError, List[String]] = {
+    readFileAs[List[Json]](path).map(jsons => jsons.map(_.noSpaces))
+  }
+}

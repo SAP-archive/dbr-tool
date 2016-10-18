@@ -11,10 +11,12 @@
 */
 package com.hybris.core.dbr.model
 
-
 /**
- * Internal error of application.
+ * Result of type's backup. If data was successfully written to file this result contains the name of the file.
  *
- * @param message with information about the error.
+ * @param client name of a client
+ * @param tenant name of a tenant
+ * @param `type` name of a type
+ * @param file name of file
  */
-case class InternalAppError(message: String)
+case class BackupTypeResult(client: String, tenant: String, `type`: String, file: String)

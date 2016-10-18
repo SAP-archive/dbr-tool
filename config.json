@@ -1,0 +1,10 @@
+{
+  "tenants" : [
+    {
+      "tenant" : "tenant1", "types" : ["shoes", "jackets"]
+    },
+    {
+      "tenant" : "tenant2"
+    }
+  ]
+}

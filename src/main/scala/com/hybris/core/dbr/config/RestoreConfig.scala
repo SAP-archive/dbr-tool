@@ -9,12 +9,8 @@
 * Information and shall use it only in accordance with the terms of the
 * license agreement you entered into with hybris.
 */
-package com.hybris.core.dbr.model
+package com.hybris.core.dbr.config
 
+case class RestoreConfig(types: List[RestoreTypeConfig])
 
-/**
- * Internal error of application.
- *
- * @param message with information about the error.
- */
-case class InternalAppError(message: String)
+case class RestoreTypeConfig(client: String, tenant: String, `type`: String, file: String)

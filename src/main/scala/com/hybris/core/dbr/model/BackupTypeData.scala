@@ -22,4 +22,4 @@ import akka.util.ByteString
  * @param `type` name of a type
  * @param data stream of type's data (document)
  */
-case class TypeBackupData(client: String, tenant: String, `type`: String, data: Source[ByteString, Any])
+case class BackupTypeData(client: String, tenant: String, `type`: String, data: Source[ByteString, Any])

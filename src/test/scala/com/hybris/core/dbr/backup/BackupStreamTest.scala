@@ -19,7 +19,7 @@ import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.document.DocumentServiceClient
-import com.hybris.core.dbr.model.{ClientTenant, ClientTenantType, TypeBackupData, TypeBackupResult}
+import com.hybris.core.dbr.model.{ClientTenant, BackupType, BackupTypeData, BackupTypeResult}
 import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.{Decoder, Json}
@@ -87,7 +87,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
       val (source, sink) = TestSource.probe[ClientTenant]
         .via(flattenTypes)
-        .toMat(TestSink.probe[ClientTenantType])(Keep.both)
+        .toMat(TestSink.probe[BackupType])(Keep.both)
         .run()
 
       sink.request(5)
@@ -98,9 +98,9 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       source.sendNext(ClientTenant("client1", "tenant4", Some(List("type1"))))
       source.sendComplete()
 
-      sink.expectNext(ClientTenantType("client1", "tenant1", "type1"))
-      sink.expectNext(ClientTenantType("client1", "tenant1", "type2"))
-      sink.expectNext(ClientTenantType("client1", "tenant4", "type1"))
+      sink.expectNext(BackupType("client1", "tenant1", "type1"))
+      sink.expectNext(BackupType("client1", "tenant1", "type2"))
+      sink.expectNext(BackupType("client1", "tenant4", "type1"))
       sink.expectComplete()
     }
 
@@ -116,20 +116,20 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       (documentServiceClient.getDocuments _).when("client1", "tenant1", "type2")
         .returns(Future.successful(stream2))
 
-      val (source, sink) = TestSource.probe[ClientTenantType]
+      val (source, sink) = TestSource.probe[BackupType]
         .via(addDocuments(documentServiceClient))
-        .toMat(TestSink.probe[TypeBackupData])(Keep.both)
+        .toMat(TestSink.probe[BackupTypeData])(Keep.both)
         .run()
 
       sink.request(5)
 
-      source.sendNext(ClientTenantType("client1", "tenant1", "type1"))
-      source.sendNext(ClientTenantType("client1", "tenant1", "type2"))
+      source.sendNext(BackupType("client1", "tenant1", "type1"))
+      source.sendNext(BackupType("client1", "tenant1", "type2"))
       source.sendComplete()
 
       sink.expectNextUnordered(
-        TypeBackupData("client1", "tenant1", "type1", stream1),
-        TypeBackupData("client1", "tenant1", "type2", stream2)
+        BackupTypeData("client1", "tenant1", "type1", stream1),
+        BackupTypeData("client1", "tenant1", "type2", stream2)
       )
       sink.expectComplete()
     }
@@ -139,18 +139,18 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
       val stream = Source(List("a", "b", "c")).map(ByteString(_))
 
-      val (source, sink) = TestSource.probe[TypeBackupData]
+      val (source, sink) = TestSource.probe[BackupTypeData]
         .via(writeToFiles(path))
-        .toMat(TestSink.probe[TypeBackupResult])(Keep.both)
+        .toMat(TestSink.probe[BackupTypeResult])(Keep.both)
         .run()
 
       sink.request(2)
 
-      source.sendNext(TypeBackupData("client1", "tenant1", "type1", stream))
+      source.sendNext(BackupTypeData("client1", "tenant1", "type1", stream))
       source.sendComplete()
 
       val file = sink.expectNextPF[String] {
-        case TypeBackupResult("client1", "tenant1", "type1", f) => f
+        case BackupTypeResult("client1", "tenant1", "type1", f) => f
       }
 
       File(s"$path/$file").contentAsString mustBe "abc"
@@ -159,30 +159,30 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
     "write summary to file" in {
       val path = File.newTemporaryDirectory().pathAsString
 
-      val (source, sink) = TestSource.probe[TypeBackupResult]
+      val (source, sink) = TestSource.probe[BackupTypeResult]
         .via(writeSummary(path, "summary.json"))
         .toMat(TestSink.probe[Done])(Keep.both)
         .run()
 
       sink.request(5)
 
-      source.sendNext(TypeBackupResult("client1", "tenant1", "type1", "file1"))
-      source.sendNext(TypeBackupResult("client1", "tenant1", "type2", "file2"))
-      source.sendNext(TypeBackupResult("client1", "tenant2", "type1", "file3"))
+      source.sendNext(BackupTypeResult("client1", "tenant1", "type1", "file1"))
+      source.sendNext(BackupTypeResult("client1", "tenant1", "type2", "file2"))
+      source.sendNext(BackupTypeResult("client1", "tenant2", "type1", "file3"))
       source.sendComplete()
 
       sink.expectNext(Done)
       sink.expectComplete()
 
-      implicit val resultDecoder: Decoder[TypeBackupResult] = deriveDecoder
+      implicit val resultDecoder: Decoder[BackupTypeResult] = deriveDecoder
 
       val summary = File(s"$path/summary.json").contentAsString
-      val result = parse(summary).getOrElse(Json.Null).as[List[TypeBackupResult]].getOrElse(List())
+      val result = parse(summary).getOrElse(Json.Null).as[List[BackupTypeResult]].getOrElse(List())
 
       result must contain theSameElementsAs List(
-        TypeBackupResult("client1", "tenant1", "type1", "file1"),
-        TypeBackupResult("client1", "tenant1", "type2", "file2"),
-        TypeBackupResult("client1", "tenant2", "type1", "file3")
+        BackupTypeResult("client1", "tenant1", "type1", "file1"),
+        BackupTypeResult("client1", "tenant1", "type2", "file2"),
+        BackupTypeResult("client1", "tenant2", "type1", "file3")
       )
     }
   }

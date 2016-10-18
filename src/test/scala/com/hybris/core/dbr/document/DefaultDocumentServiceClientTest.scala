@@ -13,14 +13,11 @@ package com.hybris.core.dbr.document
 
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
-import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials}
+import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
-import cats.data.Xor
 import com.hybris.core.dbr.BaseCoreTest
-import com.hybris.core.dbr.restore.client.{Document, DefaultDocumentClient}
-import com.hybris.core.dbr.restore.errors.InternalServiceError
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.Await
@@ -63,10 +60,10 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
       result mustBe """[{"doc":1},{"doc":2}]"""
     }
 
-    "get types with basic authorization" in {
+    "get types with authorization token" in {
 
       // given
-      val client = new DefaultDocumentServiceClient("http://localhost:9876", Some(("user", "pass")))
+      val client = new DefaultDocumentServiceClient("http://localhost:9876", Some("token"))
 
       // when
       val types = client.getTypes("client", "tenant3").futureValue
@@ -76,30 +73,42 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
 
     }
 
-      // TODO - clean me!!!
-//    "insert raw document" in {
-//      // given
-//      val client = new DefaultDocumentClient("http://localhost:8997", ("", ""))
-//
-//      // when
-//      whenReady(client.insertRawDocument("tenant", "client", "cats", """{"a": 1, "b": true}""")) { result ⇒
-//        result mustBe Document("1234abcd").right
-//      }
-//    }
-//
-//    "return error if document service fails" in {
-//      // given
-//      val client = new DefaultDocumentClient("http://localhost:8997", ("", ""))
-//
-//      // when
-//      whenReady(client.insertRawDocument("unluckytenant", "client", "cats", """{"zz": 1, "cc": true}""")) { result ⇒
-//        result mustBe a[Xor[InternalServiceError, _]]
-//      }
-//    }
+    // TODO - clean me!!!
+    //    "insert raw document" in {
+    //      // given
+    //      val client = new DefaultDocumentClient("http://localhost:8997", ("", ""))
+    //
+    //      // when
+    //      whenReady(client.insertRawDocument("tenant", "client", "cats", """{"a": 1, "b": true}""")) { result ⇒
+    //        result mustBe Document("1234abcd").right
+    //      }
+    //    }
+    //
+    //    "return error if document service fails" in {
+    "get types without authorization when local mode" in {
+
+      // given
+      val client = new DefaultDocumentServiceClient("http://localhost:9876", None)
+
+      // when
+      val types = client.getTypes("client", "tenant4").futureValue
+
+      // then
+      types must contain theSameElementsAs List("type1", "type2")
+
+    }
+    //      // given
+    //      val client = new DefaultDocumentClient("http://localhost:8997", ("", ""))
+    //
+    //      // when
+    //      whenReady(client.insertRawDocument("unluckytenant", "client", "cats", """{"zz": 1, "cc": true}""")) { result ⇒
+    //        result mustBe a[Xor[InternalServiceError, _]]
+    //      }
+    //    }
   }
 
-  def extractCredentials: PartialFunction[HttpHeader, (String, String)] = {
-    case Authorization(BasicHttpCredentials(username, password)) => (username, password)
+  def extractToken: PartialFunction[HttpHeader, String] = {
+    case Authorization(OAuth2BearerToken(token)) => token
   }
 
   val route =
@@ -138,27 +147,49 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
       } ~
       path("tenant3" / "client") {
         get {
-          headerValueByName("hybris-client") { client =>
-            headerValueByName("hybris-tenant") { tenant =>
-              headerValuePF(extractCredentials) { credentials =>
-                (client, tenant, credentials._1, credentials._2) match {
-                  case ("client", "tenant3", "user", "pass") =>
-                    complete(HttpEntity(ContentTypes.`application/json`,
-                      """
-                        |{
-                        |  "types" : ["type1", "type2"]
-                        |}
-                      """.
-                        stripMargin))
-                  case _ =>
-                    complete(StatusCodes.
-                      BadRequest)
-                }
-              }
+          headerValuePF(extractToken) { token =>
+            if (token == "token") {
+              complete(HttpEntity(ContentTypes.`application/json`,
+                """
+                  |{
+                  |  "types" : ["type1", "type2"]
+                  |}
+                """.
+                  stripMargin))
+            } else {
+              complete(StatusCodes.BadRequest)
             }
           }
         }
+      } ~
+      path("tenant4" / "client") {
+        get {
+          headerValueByName("hybris-client") {
+            client =>
+              headerValueByName("hybris-tenant") {
+                tenant =>
+                  optionalHeaderValueByName("Authorization") {
+                    token ⇒
+                      (client, tenant, token) match {
+                        case ("client", "tenant4", None) =>
+                          complete(HttpEntity(ContentTypes.`application/json`,
+                            """
+                              |{
+                              |  "types" : ["type1", "type2"]
+                              |}
+                            """.
+                              stripMargin))
+
+
+                        case _ ⇒
+                          complete(StatusCodes.BadRequest)
+                      }
+                  }
+              }
+          }
+        }
       }
+
 
   var binding: ServerBinding = _
 

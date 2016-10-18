@@ -17,12 +17,25 @@ import java.nio.file.{AccessDeniedException, NoSuchFileException}
 import better.files.File
 import cats.data.Xor
 import cats.implicits._
-import com.hybris.core.dbr.file.FileOps.Ready
-import com.hybris.core.dbr.model.InternalAppError
+import io.circe.Decoder
+import io.circe.parser._
 
-trait FileOps {
+object FileOps {
 
-  def prepareEmptyDir(path: String): Xor[InternalAppError, Ready.type] = {
+  case object Ready
+
+  sealed class FileError(message: String) {
+    def getMessage = message
+  }
+
+  case class GenericFileError(message: String) extends FileError(message)
+
+  case class FileNotFoundError(path: String) extends FileError(s"File $path not found")
+
+  case class FileParsingError(message: String) extends FileError(message)
+
+
+  def prepareEmptyDir(path: String): Xor[FileError, Ready.type] = {
     val dstDir = File(path)
 
     try {
@@ -30,33 +43,41 @@ trait FileOps {
         if (!dstDir.isEmpty) dstDir.clear()
         Ready.right
       } else if (dstDir.exists && dstDir.isRegularFile) {
-        InternalAppError("Destination directory is a file.").left
+        GenericFileError("Destination directory is a file.").left
       } else if (dstDir.notExists) {
         createDirectory(dstDir)
       } else {
-        InternalAppError("Failed to prepare destination directory.").left
+        GenericFileError("Failed to prepare destination directory.").left
       }
     } catch {
       case e: Exception =>
-        InternalAppError(s"Failed to prepare destination directory, error: ${e.getMessage}").left
+        GenericFileError(s"Failed to prepare destination directory, error: ${e.getMessage}").left
     }
   }
 
-  private def createDirectory(dir: File): Xor[InternalAppError, Ready.type] = {
+  private def createDirectory(dir: File): Xor[FileError, Ready.type] = {
     try {
       dir.createDirectory()
       Ready.right
     } catch {
       case e: AccessDeniedException =>
-        InternalAppError("Failed to prepare destination directory, access denied.").left
+        GenericFileError("Failed to prepare destination directory, access denied.").left
       case e: NoSuchFileException =>
-        InternalAppError("Failed to prepare destination directory, path doesn't exist.").left
+        GenericFileError("Failed to prepare destination directory, path doesn't exist.").left
       case e: Throwable =>
-        InternalAppError(s"Failed to prepare destination directory, error: ${e.getMessage}.").left
+        GenericFileError(s"Failed to prepare destination directory, error: ${e.getMessage}.").left
     }
   }
-}
 
-object FileOps {
-  case object Ready
+  def readFileAs[T](path: String)(implicit decoder: Decoder[T]): Xor[FileError, T] = {
+    val file = File(path)
+
+    if (file.exists) {
+      parse(file.contentAsString)
+        .flatMap(json => json.as[T])
+        .leftMap(error => FileParsingError("Failed to decode configuration file" + error.getMessage))
+    } else {
+      FileNotFoundError(path).left
+    }
+  }
 }

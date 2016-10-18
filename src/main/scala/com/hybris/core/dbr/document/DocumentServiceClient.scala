@@ -40,6 +40,15 @@ trait DocumentServiceClient {
    */
   def getDocuments(client: String, tenant: String, `type`: String): Future[Source[ByteString, Any]]
 
-  def insertRawDocument(tenant: String, client: String, `type`: String, document: String): Future[String]
+  /**
+   * Inserts single document in raw write mode
+   *
+   * @param client name of a client
+   * @param tenant name of a tenant
+   * @param `type` name of a type
+   * @param document document
+   * @return future with ID
+   */
+  def insertRawDocument(client: String, tenant: String, `type`: String, document: String): Future[String]
 
 }

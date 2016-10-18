@@ -16,88 +16,142 @@ import java.time.Instant
 import better.files.File
 import cats.implicits._
 import com.hybris.core.dbr.BaseTest
-import com.hybris.core.dbr.file.FileOps.Ready
-import com.hybris.core.dbr.model.InternalAppError
+import com.hybris.core.dbr.file.FileOps._
+import io.circe.Decoder
+import io.circe.generic.semiauto._
 
-import scala.util.Random
+class FileOpsTest extends BaseTest {
 
-class FileOpsTest extends BaseTest with FileOps {
+  private case class TestPerson(name: String, age: Int)
 
-  "FileOps" should {
+  private implicit val testPersonDecoder: Decoder[TestPerson] = deriveDecoder
 
-    "prepare empty dir when it doesn't exist" in {
-      // given
-      val path = s"/tmp/$randomName"
+  "FileOps" when {
 
-      // when
-      val result = prepareEmptyDir(path)
+    "preparing empty directory" should {
 
-      // then
-      result mustBe Ready.right
+      "create empty directory when it doesn't exist" in {
+        // given
+        val path = s"/tmp/$randomName"
 
-      // clean up
-      cleanUp(path)
+        // when
+        val result = prepareEmptyDir(path)
+
+        // then
+        result mustBe Ready.right
+
+        // clean up
+        cleanUp(path)
+      }
+
+      "accept directory when it exists and it's empty" in {
+        // given
+        val path = s"/tmp/$randomName"
+        File(path).createDirectory()
+
+        // when
+        val result = prepareEmptyDir(path)
+
+        // then
+        result mustBe Ready.right
+
+        // clean up
+        cleanUp(path)
+      }
+
+      "clear directory when it exists and it's not empty" in {
+        // given
+        val path = s"/tmp/$randomName"
+        File(path).createDirectory()
+        File(s"$path/$randomName").touch(Instant.now())
+
+        // when
+        val result = prepareEmptyDir(path)
+
+        // then
+        result mustBe Ready.right
+
+        // clean up
+        cleanUp(path)
+      }
+
+      "fail to create empty dir when path doesn't exist" in {
+        // given
+        val path = s"/tmp/$randomName/$randomName"
+
+        // when
+        val result = prepareEmptyDir(path).toEither.left.value
+
+        // then
+        result mustBe a[GenericFileError]
+      }
+
+      "fail to create empty dir when path leads to file" in {
+        val path = s"/tmp/$randomName"
+        File(path).touch(Instant.now())
+
+        // when
+        val result = prepareEmptyDir(path).toEither.left.value
+
+        // then
+        result mustBe a[GenericFileError]
+
+        // clean up
+        cleanUp(path)
+      }
     }
 
-    "prepare empty dir when it exists and it's empty" in {
-      // given
-      val path = s"/tmp/$randomName"
-      File(path).createDirectory()
+    "reading type from file" should {
 
-      // when
-      val result = prepareEmptyDir(path)
+      "return desired type" in {
+        val file = File.newTemporaryFile()
+        file.overwrite(
+          """
+            | {
+            |   "name" : "John",
+            |   "age" : 30
+            | }
+          """.stripMargin)
 
-      // then
-      result mustBe Ready.right
+        val testPerson = readFileAs[TestPerson](file.pathAsString).toEither.right.value
 
-      // clean up
-      cleanUp(path)
+        testPerson mustBe TestPerson("John", 30)
+      }
+
+      "return error if file doesn't exist" in {
+        val file = File.temp / randomName
+
+        val result = readFileAs[TestPerson](file.pathAsString).toEither.left.value
+
+        result mustBe FileNotFoundError(file.pathAsString)
+      }
+
+      "return error when file contains wrong JSON" in {
+        val file = File.newTemporaryFile()
+        file.overwrite("not a json")
+
+        val result = readFileAs(file.pathAsString).toEither.left.value
+
+        result mustBe a[FileParsingError]
+      }
+
+      "return error when file contains unexpected JSON" in {
+        val file = File.newTemporaryFile()
+        file.overwrite(
+          """
+            | {
+            |   "firstName" : "John",
+            |   "numberOfYears" : 30
+            | }
+          """.stripMargin)
+
+        val result = readFileAs(file.pathAsString).toEither.left.value
+
+        result mustBe a[FileParsingError]
+      }
     }
-
-    "prepare empty dir when it exists and it's not empty" in {
-      // given
-      val path = s"/tmp/$randomName"
-      File(path).createDirectory()
-      File(s"$path/$randomName").touch(Instant.now())
-
-      // when
-      val result = prepareEmptyDir(path)
-
-      // then
-      result mustBe Ready.right
-
-      // clean up
-      cleanUp(path)
-    }
-
-    "fail to create empty dir when path doesn't exist" in {
-      // given
-      val path = s"/tmp/$randomName/$randomName"
-
-      // when
-      val result = prepareEmptyDir(path).toEither.left.value
-
-      // then
-      result mustBe a[InternalAppError]
-    }
-
-    "fail to create empty dir when path leads to file" in {
-      val path = s"/tmp/$randomName"
-      File(path).touch(Instant.now())
-
-      // when
-      val result = prepareEmptyDir(path).toEither.left.value
-
-      // then
-      result mustBe a[InternalAppError]
-
-      // clean up
-      cleanUp(path)
-    }
-
   }
 
-  private def randomName = Random.alphanumeric take 10 mkString
 
   private def cleanUp(path: String) = File(path).delete()
 }

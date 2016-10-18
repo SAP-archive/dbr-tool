@@ -21,6 +21,7 @@ libraryDependencies ++= {
   val circeVersion = "0.5.3"
 
   Seq(
+    "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion,
     "com.typesafe.akka" %% "akka-stream" % akkaVersion,
     "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
 
@@ -37,11 +38,13 @@ libraryDependencies ++= {
     "io.circe" %% "circe-parser" % circeVersion,
 
     "org.typelevel" %% "cats" % "0.7.2",
+    "com.ironcorelabs" %% "cats-scalatest" % "1.1.2" % "test",
 
     // configuration
     "com.typesafe" % "config" % "1.3.1",
 
     // logging
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
     "ch.qos.logback" % "logback-classic" % "1.1.7",
 
     // tests

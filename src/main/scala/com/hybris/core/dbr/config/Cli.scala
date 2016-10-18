@@ -11,10 +11,6 @@
 */
 package com.hybris.core.dbr.config
 
-import cats.data.Xor
-import cats.implicits._
-import com.hybris.core.dbr.model.InternalAppError
-
 
 /**
  * Functions for command line interface.
@@ -75,14 +71,4 @@ trait Cli extends AppConfig {
     parser.parse(args, CliConfig())
   }
 
-  def validateCliConfig(appConfig: CliConfig): Xor[InternalAppError, CliConfig] = {
-    validateEnv(appConfig)
-  }
-
-  private def validateEnv(appConfig: CliConfig): Xor[InternalAppError, CliConfig] = {
-    appConfig.env match {
-      case "us-prod" | "us-stage" | "eu" => appConfig.right
-      case env => InternalAppError(s"Wrong environment provided: '$env'. Acceptable values: us-prod, us-stage, eu").left
-    }
-  }
 }

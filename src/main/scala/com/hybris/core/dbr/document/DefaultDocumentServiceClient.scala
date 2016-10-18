@@ -13,16 +13,12 @@ package com.hybris.core.dbr.document
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.client.RequestBuilding
-import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials, RawHeader}
+import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken, RawHeader}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import cats.data.Xor
-import com.hybris.core.dbr.restore.errors.InternalServiceError
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder
@@ -31,25 +27,25 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 class DefaultDocumentServiceClient(documentServiceUrl: String,
-                                   basicHttpCredentials: Option[(String, String)])
+                                   token: Option[String])
                                   (implicit system: ActorSystem,
                                    materializer: Materializer,
                                    executionContext: ExecutionContext)
   extends DocumentServiceClient
   with CirceSupport {
 
-  final case class Document(id: String)
-
-  private val authorizationHeader = prepareAuthorizationHeader(basicHttpCredentials)
+  private case class InsertResult(id: String)
 
   private case class GetTypesResponse(types: List[String])
 
   private implicit val getTypesResponseDecoder: Decoder[GetTypesResponse] = deriveDecoder
+  private implicit val insertResulttDecoder: Decoder[InsertResult] = deriveDecoder
+
+  private val authorizationHeader = token.map(t => Authorization(OAuth2BearerToken(t)))
 
   override def getTypes(client: String, tenant: String): Future[List[String]] = {
 
-    val request = HttpRequest(uri = s"$documentServiceUrl/$tenant/$client",
-      headers = getHeaders(client, tenant))
+    val request = HttpRequest(uri = s"$documentServiceUrl/$tenant/$client", headers = getHeaders(client, tenant))
 
     Http()
       .singleRequest(request)
@@ -73,7 +69,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       .singleRequest(request)
       .flatMap {
         case response if response.status.isSuccess() =>
-          Future.successful(response.entity.dataBytes)
+          Future.successful(response.entity.withoutSizeLimit().dataBytes)
         case response =>
           response.discardEntityBytes()
           Future.failed(new RuntimeException(
@@ -82,40 +78,28 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       }
   }
 
-  override def insertRawDocument(tenant: String, client: String, `type`: String, document: String): Future[String] = {
-    implicit val documentDecoder: Decoder[Document] = deriveDecoder
+  override def insertRawDocument(client: String, tenant: String, `type`: String, document: String): Future[String] = {
 
-    val projectUri = s"$documentServiceUrl/$tenant/$client/data/${`type`}"
 
-    val uri = Uri(projectUri).withQuery(Query(Map("rawwrite" → "true")))
-    val entity = HttpEntity(ContentTypes.`application/json`, document)
-    val request = RequestBuilding.Post(uri, entity).withHeaders(authorizationHeader.get)
-
+    val request = HttpRequest(method = HttpMethods.POST,
+      uri = s"$documentServiceUrl/$tenant/$client/data/${`type`}?rawwrite=true",
+      entity = HttpEntity(ContentTypes.`application/json`, document),
+      headers = getHeaders(client, tenant))
 
     Http().singleRequest(request).flatMap {
 
       case response if response.status.isSuccess() ⇒
-        Unmarshal(response).to[Document].map(_.id)
+        Unmarshal(response).to[InsertResult].map(_.id)
 
       case response ⇒
         Future.failed(new RuntimeException(s"Error occurred inserting raw document. Response code: ${response.status}"))
     }
   }
 
-  private def prepareAuthorizationHeader(credentials: Option[(String, String)]): Option[HttpHeader] = {
-    credentials.map {
-      case (username, password) => Authorization(BasicHttpCredentials(username, password))
-    }
-  }
-
   private def getHeaders(client: String, tenant: String): List[HttpHeader] = {
-    val hybrisHeaders = List(RawHeader("hybris-client", client), RawHeader("hybris-tenant", tenant))
-
     authorizationHeader match {
-      case Some(ah) =>
-        ah :: hybrisHeaders
-      case None =>
-        hybrisHeaders
+      case Some(authHeader) ⇒ authHeader :: Nil
+      case None ⇒ RawHeader("hybris-client", client) :: RawHeader("hybris-tenant", tenant) :: Nil
     }
   }
 }

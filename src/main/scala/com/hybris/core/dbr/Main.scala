@@ -12,28 +12,28 @@
 package com.hybris.core.dbr
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import cats.data.Xor
 import com.hybris.core.dbr.backup.BackupService
 import com.hybris.core.dbr.config._
 import com.hybris.core.dbr.document.DefaultDocumentServiceClient
-import com.hybris.core.dbr.file.FileOps
-import com.hybris.core.dbr.model.ClientTenant
-import com.hybris.core.dbr.restore.repository.FileBackupRepository
-import com.hybris.core.dbr.restore.service.DocumentRestoreService
+import com.hybris.core.dbr.file.FileOps._
+import com.hybris.core.dbr.model.{ClientTenant, InternalAppError}
+import com.hybris.core.dbr.oauth.OAuthClient
+import com.hybris.core.dbr.restore.RestoreService
+import com.typesafe.scalalogging.LazyLogging
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 /**
  * Main class of backup tool.
  */
-object Main extends App with Cli with FileConfig with AppConfig with FileOps {
+object Main extends App with Cli with FileConfig with AppConfig with LazyLogging {
 
   private def run(): Unit = {
     readCliConfig(args) match {
-      case Some(cliConfig) if cliConfig.isBackup => proceedBackup(cliConfig)
+      case Some(cliConfig) if cliConfig.isBackup => runBackup(cliConfig)
 
       case Some(cliConfig) if cliConfig.isRestore => runRestore(cliConfig)
 
@@ -41,95 +41,107 @@ object Main extends App with Cli with FileConfig with AppConfig with FileOps {
     }
   }
 
-  private def proceedBackup(cliConfig: CliConfig): Unit = {
-    val preparation = validateCliConfig(cliConfig)
-      .flatMap(readBackupConfig)
-      .flatMap {
-        case (ac, bc) => prepareEmptyDir(ac.backupDestinationDir).map(ready => (ac, bc))
-      }
-
-    preparation match {
-      case Xor.Right((appConfig, backupConfig)) =>
-        runBackup(appConfig, backupConfig)
+  private def runBackup(cliConfig: CliConfig) = {
+    prepareBackup(cliConfig) match {
+      case Xor.Right(backupConfig) =>
+        doBackup(cliConfig, backupConfig)
 
       case Xor.Left(error) =>
-        Console.out.println(error.message)
+        logger.error(error.message)
     }
   }
 
-  private def runBackup(cliConfig: CliConfig, backupConfig: BackupConfig): Unit = {
-    Console.out.println("Starting backup")
+  private def prepareBackup(cliConfig: CliConfig): Xor[InternalAppError, BackupConfig] = {
+    readBackupConfig(cliConfig.configFile)
+      .flatMap { backupConfig =>
+        prepareEmptyDir(cliConfig.backupDestinationDir)
+          .map(ready => backupConfig)
+          .leftMap {
+            case error: FileError => InternalAppError(error.getMessage)
+          }
+      }
+  }
+
+  private def doBackup(cliConfig: CliConfig, backupConfig: BackupConfig): Unit = {
+    logger.info("Starting backup")
 
     implicit val system = ActorSystem("dbr")
     implicit val materializer = ActorMaterializer()
 
     import system.dispatcher
 
-    val credentials = prepareBasicHttpCredentials(documentHttpCredentials)
+    val oauthClient = new OAuthClient(oauthUrl(cliConfig.env), clientId, clientSecret, scopes)
 
-    val documentServiceClient = new DefaultDocumentServiceClient(documentUrl(cliConfig.env), credentials)
+    val result = getOAuthToken(cliConfig.env, oauthClient)
+      .flatMap { token =>
+        val documentServiceClient = new DefaultDocumentServiceClient(documentUrl(cliConfig.env), token)
 
-    val backupJob = new BackupService(documentServiceClient,
-      cliConfig.backupDestinationDir, summaryFileName)
+        val backupJob = new BackupService(documentServiceClient,
+          cliConfig.backupDestinationDir, summaryFileName)
 
-    val cts = backupConfig.tenants.map(t => ClientTenant(cliConfig.client, t.tenant, t.types))
+        val cts = backupConfig.tenants.map(t => ClientTenant(cliConfig.client, t.tenant, t.types))
 
-    backupJob.runBackup(cts) onComplete {
+        backupJob.runBackup(cts)
+      }
+
+    result.onComplete {
       case Success(_) =>
-        Console.out.println("Backup done successfully")
-        Http().shutdownAllConnectionPools() onComplete { _ =>
-          materializer.shutdown()
-          system.terminate()
-        }
+        logger.info("Backup done successfully")
+        system.terminate()
 
       case Failure(ex) =>
-        Console.out.println("Backup failed with error: " + ex.getMessage)
-        Http().shutdownAllConnectionPools() onComplete { _ =>
-          materializer.shutdown()
-          system.terminate()
-        }
+        logger.error("Backup failed with error: " + ex.getMessage)
+        system.terminate()
     }
   }
 
-  private def runRestore(cliConfig: CliConfig): Unit = {
-    Console.out.println("Starting restore")
+  private def runRestore(cliConfig: CliConfig) = {
+    prepareRestore(cliConfig) match {
+      case Xor.Right(restoreConfig) =>
+        doRestore(cliConfig, restoreConfig)
+
+      case Xor.Left(error) =>
+        logger.error(error.message)
+    }
+  }
+
+  private def prepareRestore(cliConfig: CliConfig): Xor[InternalAppError, RestoreConfig] = {
+    readRestoreConfig(cliConfig.configFile)
+  }
+
+  private def doRestore(cliConfig: CliConfig, restoreConfig: RestoreConfig): Unit = {
+    logger.info("Starting restore")
 
     implicit val system = ActorSystem("dbr")
     implicit val materializer = ActorMaterializer()
 
     import system.dispatcher
 
-    val credentials = prepareBasicHttpCredentials(documentHttpCredentials)
+    val oauthClient = new OAuthClient(oauthUrl(cliConfig.env), clientId, clientSecret, scopes)
 
-    val documentServiceClient = new DefaultDocumentServiceClient(documentUrl(cliConfig.env), credentials)
+    val result = getOAuthToken(cliConfig.env, oauthClient)
+      .flatMap { token =>
+        val documentServiceClient = new DefaultDocumentServiceClient(documentUrl(cliConfig.env), token)
 
-    val backupFileRepository = new FileBackupRepository(cliConfig.restoreSourceDir)
+        val restoreService = new RestoreService(documentServiceClient, cliConfig.restoreSourceDir)
 
-    val restoreService = new DocumentRestoreService(documentServiceClient, backupFileRepository)
+        restoreService.restore(restoreConfig.types)
+      }
 
-    Future.sequence(getRestoreConfig(cliConfig.configFile).map(restoreService.restore)).onComplete {
+    result onComplete {
       case Success(_) =>
-        Console.out.println("Restore done successfully")
-        Http().shutdownAllConnectionPools() onComplete { _ =>
-          materializer.shutdown()
-          system.terminate()
-        }
+        logger.info("Restore done successfully")
+        system.terminate()
 
       case Failure(ex) =>
-        Console.out.println("Restore failed with error: " + ex.getMessage)
-        Http().shutdownAllConnectionPools() onComplete { _ =>
-          materializer.shutdown()
-          system.terminate()
-        }
+        logger.error("Restore failed with error: " + ex.getMessage)
+        ex.printStackTrace()
+        system.terminate()
     }
   }
 
-  private def prepareBasicHttpCredentials(credentials: String): Option[(String, String)] = {
-    if (credentials.trim.isEmpty) None
-    else {
-      val idx = credentials.indexOf(":")
-      if (idx == -1) None else Some((credentials.substring(0, idx), credentials.substring(idx + 1)))
-    }
+  private def getOAuthToken(env: String, oauthClient: OAuthClient)(implicit ec: ExecutionContext): Future[Option[String]] = {
+    if (env == "local") Future.successful(None) else oauthClient.getToken.map(Some(_))
   }
 
   run()

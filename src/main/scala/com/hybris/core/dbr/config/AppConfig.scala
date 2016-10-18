@@ -12,6 +12,8 @@
 package com.hybris.core.dbr.config
 
 import com.typesafe.config.ConfigFactory
+import collection.JavaConversions._
+
 
 import scala.collection.JavaConverters._
 
@@ -31,7 +33,12 @@ trait AppConfig {
 
   def documentUrl(env: String): String = config.getString(s"environments.$env.document-url")
 
-  // TODO - remove with oauth2
-  val documentHttpCredentials = config.getString("document-http-credentials")
+  def oauthUrl(env: String): String = config.getString(s"environments.$env.oauth-url")
+
+  val clientId = config.getString("api.client.id")
+
+  val clientSecret = config.getString("api.client.secret")
+
+  val scopes = config.getStringList("api.scopes").toList
 
 }
