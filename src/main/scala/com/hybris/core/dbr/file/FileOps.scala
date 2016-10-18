@@ -34,7 +34,12 @@ object FileOps {
 
   case class FileParsingError(message: String) extends FileError(message)
 
-
+  /**
+   * Prepares empty directory.
+   *
+   * @param path path to directory
+   * @return
+   */
   def prepareEmptyDir(path: String): Xor[FileError, Ready.type] = {
     val dstDir = File(path)
 
@@ -69,13 +74,21 @@ object FileOps {
     }
   }
 
+  /**
+   * Reads content from file and decodes it to given type.
+   *
+   * @param path path to file
+   * @param decoder decoder to decode content
+   * @tparam T expected type of result
+   * @return
+   */
   def readFileAs[T](path: String)(implicit decoder: Decoder[T]): Xor[FileError, T] = {
     val file = File(path)
 
     if (file.exists) {
       parse(file.contentAsString)
         .flatMap(json => json.as[T])
-        .leftMap(error => FileParsingError("Failed to decode configuration file" + error.getMessage))
+        .leftMap(error => FileParsingError(s"Failed to read file '$path', unexpected content, error: " + error.getMessage))
     } else {
       FileNotFoundError(path).left
     }

@@ -18,6 +18,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, StatusCod
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import com.hybris.core.dbr.BaseCoreTest
+import com.hybris.core.dbr.exceptions.DocumentServiceClientException
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.Await
@@ -31,80 +32,62 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
 
   implicit val defaultPatience = PatienceConfig(timeout = Span(2, Seconds), interval = Span(30, Millis))
 
+  val client = new DefaultDocumentServiceClient("http://localhost:9876", Some("token"))
+
   "DefaultDocumentServiceClient" should {
 
     "get types" in {
 
-      // given
+      val types = client.getTypes("client.token", "typesTenant").futureValue
+
+      types must contain theSameElementsAs List("type1", "type2")
+    }
+
+    "get types without token" in {
+
       val client = new DefaultDocumentServiceClient("http://localhost:9876", None)
 
-      // when
-      val types = client.getTypes("client", "tenant1").futureValue
+      val types = client.getTypes("client.notoken", "typesTenant").futureValue
 
-      // then
       types must contain theSameElementsAs List("type1", "type2")
+    }
 
+    "handle bad response when getting types" in {
+
+      val result = client.getTypes("client.bad", "typesTenant").failed.futureValue
+
+      result mustBe a[DocumentServiceClientException]
     }
 
     "get documents" in {
 
-      // given
-      val client = new DefaultDocumentServiceClient("http://localhost:9876", None)
-
-      // when
-      val stream = client.getDocuments("client", "tenant2", "type1").futureValue
+      val stream = client.getDocuments("client.token", "documentsTenant", "items").futureValue
 
       val result = stream.map(_.utf8String).runFold("")(_ + _).futureValue
 
-      // then
       result mustBe """[{"doc":1},{"doc":2}]"""
     }
 
-    "get types with authorization token" in {
+    "handle bad response when getting documents" in {
 
-      // given
-      val client = new DefaultDocumentServiceClient("http://localhost:9876", Some("token"))
+      val result = client.getDocuments("client.bad", "documentsTenant", "items").failed.futureValue
 
-      // when
-      val types = client.getTypes("client", "tenant3").futureValue
-
-      // then
-      types must contain theSameElementsAs List("type1", "type2")
-
+      result mustBe a[DocumentServiceClientException]
     }
 
-    // TODO - clean me!!!
-    //    "insert raw document" in {
-    //      // given
-    //      val client = new DefaultDocumentClient("http://localhost:8997", ("", ""))
-    //
-    //      // when
-    //      whenReady(client.insertRawDocument("tenant", "client", "cats", """{"a": 1, "b": true}""")) { result ⇒
-    //        result mustBe Document("1234abcd").right
-    //      }
-    //    }
-    //
-    //    "return error if document service fails" in {
-    "get types without authorization when local mode" in {
+    "insert raw document" in {
 
-      // given
-      val client = new DefaultDocumentServiceClient("http://localhost:9876", None)
+      val result = client.insertRawDocument("client.token", "insertTenant", "items", """{"a":1}""").futureValue
 
-      // when
-      val types = client.getTypes("client", "tenant4").futureValue
-
-      // then
-      types must contain theSameElementsAs List("type1", "type2")
-
+      result mustBe "someId"
     }
-    //      // given
-    //      val client = new DefaultDocumentClient("http://localhost:8997", ("", ""))
-    //
-    //      // when
-    //      whenReady(client.insertRawDocument("unluckytenant", "client", "cats", """{"zz": 1, "cc": true}""")) { result ⇒
-    //        result mustBe a[Xor[InternalServiceError, _]]
-    //      }
-    //    }
+
+    "handle bad response when inserting raw document" in {
+
+      val result = client.insertRawDocument("client.bad", "insertTenant", "items", """{"a":1}""").failed.futureValue
+
+      result mustBe a[DocumentServiceClientException]
+    }
   }
 
   def extractToken: PartialFunction[HttpHeader, String] = {
@@ -112,84 +95,68 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
   }
 
   val route =
-    path("tenant1" / "client") {
+    pathPrefix("typesTenant") {
       get {
-        headerValueByName("hybris-client") { client =>
-          headerValueByName("hybris-tenant") { tenant =>
-            (client, tenant) match {
-              case ("client", "tenant1") =>
-                complete(HttpEntity(ContentTypes.`application/json`,
-                  """
-                    |{
-                    |  "types" : ["type1", "type2"]
-                    |}
-                  """.stripMargin))
-              case _ =>
-                complete(StatusCodes.BadRequest)
-            }
-          }
-        }
-      }
-    } ~
-      path("tenant2" / "client" / "data" / "type1") {
-        get {
-          headerValueByName("hybris-client") { client =>
-            headerValueByName("hybris-tenant") { tenant =>
-              (client, tenant) match {
-                case ("client", "tenant2") =>
-                  complete(HttpEntity(ContentTypes.`application/json`, """[{"doc":1},{"doc":2}]"""))
-                case _ =>
-                  complete(StatusCodes.BadRequest)
-              }
-            }
-          }
-        }
-      } ~
-      path("tenant3" / "client") {
-        get {
+        path("client.token") {
           headerValuePF(extractToken) { token =>
             if (token == "token") {
-              complete(HttpEntity(ContentTypes.`application/json`,
-                """
-                  |{
-                  |  "types" : ["type1", "type2"]
-                  |}
-                """.
-                  stripMargin))
+              complete(HttpEntity(ContentTypes.`application/json`, """{"types" : ["type1", "type2"]}"""))
             } else {
               complete(StatusCodes.BadRequest)
             }
           }
+        } ~
+          path("client.notoken") {
+            headerValueByName("hybris-client") { client =>
+              headerValueByName("hybris-tenant") { tenant =>
+                (client, tenant) match {
+                  case ("client.notoken", "typesTenant") =>
+                    complete(HttpEntity(ContentTypes.`application/json`, """{"types" : ["type1", "type2"]}"""))
+                  case _ ⇒
+                    complete(StatusCodes.BadRequest)
+                }
+              }
+            }
+          } ~
+          path("client.bad") {
+            complete(StatusCodes.BadRequest)
+          }
+      }
+    } ~
+      pathPrefix("documentsTenant") {
+        get {
+          path("client.token" / "data" / "items") {
+            headerValuePF(extractToken) { token =>
+              if (token == "token") {
+                complete(HttpEntity(ContentTypes.`application/json`, """[{"doc":1},{"doc":2}]"""))
+              } else {
+                complete(StatusCodes.BadRequest)
+              }
+            }
+          } ~
+            path("client.bad" / "data" / "items") {
+              complete(StatusCodes.BadRequest)
+            }
         }
       } ~
-      path("tenant4" / "client") {
-        get {
-          headerValueByName("hybris-client") {
-            client =>
-              headerValueByName("hybris-tenant") {
-                tenant =>
-                  optionalHeaderValueByName("Authorization") {
-                    token ⇒
-                      (client, tenant, token) match {
-                        case ("client", "tenant4", None) =>
-                          complete(HttpEntity(ContentTypes.`application/json`,
-                            """
-                              |{
-                              |  "types" : ["type1", "type2"]
-                              |}
-                            """.
-                              stripMargin))
-
-
-                        case _ ⇒
-                          complete(StatusCodes.BadRequest)
-                      }
-                  }
+      pathPrefix("insertTenant") {
+        post {
+          path("client.token" / "data" / "items") {
+            entity(as[String]) { body =>
+              headerValuePF(extractToken) { token =>
+                if (body == """{"a":1}""" && token == "token") {
+                  complete(HttpEntity(ContentTypes.`application/json`, """{"id" : "someId"}"""))
+                } else {
+                  complete(StatusCodes.BadRequest)
+                }
               }
-          }
+            }
+          } ~
+            path("client.bad" / "data" / "items") {
+              complete(StatusCodes.BadRequest)
+            }
         }
       }
-
 
   var binding: ServerBinding = _
 

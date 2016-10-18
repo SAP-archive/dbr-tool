@@ -19,6 +19,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import com.hybris.core.dbr.exceptions.DocumentServiceClientException
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder
@@ -45,16 +46,19 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
   override def getTypes(client: String, tenant: String): Future[List[String]] = {
 
-    val request = HttpRequest(uri = s"$documentServiceUrl/$tenant/$client", headers = getHeaders(client, tenant))
+    val request = HttpRequest(
+      uri = s"$documentServiceUrl/$tenant/$client",
+      headers = getHeaders(client, tenant))
 
     Http()
       .singleRequest(request)
       .flatMap {
         case response if response.status.isSuccess() =>
           Unmarshal(response).to[GetTypesResponse].map(_.types)
+
         case response =>
           response.discardEntityBytes()
-          Future.failed(new RuntimeException(
+          Future.failed(new DocumentServiceClientException(
             s"Failed to get types for client '$client' and tenant '$tenant'," +
               s" status: ${response.status.intValue()}"))
       }
@@ -62,7 +66,8 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
   override def getDocuments(client: String, tenant: String, `type`: String): Future[Source[ByteString, Any]] = {
 
-    val request = HttpRequest(uri = s"$documentServiceUrl/$tenant/$client/data/${`type`}?fetchAll=true",
+    val request = HttpRequest(
+      uri = s"$documentServiceUrl/$tenant/$client/data/${`type`}?fetchAll=true",
       headers = getHeaders(client, tenant))
 
     Http()
@@ -70,9 +75,10 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       .flatMap {
         case response if response.status.isSuccess() =>
           Future.successful(response.entity.withoutSizeLimit().dataBytes)
+
         case response =>
           response.discardEntityBytes()
-          Future.failed(new RuntimeException(
+          Future.failed(new DocumentServiceClientException(
             s"Failed to get documents for client '$client',tenant '$tenant'" +
               s" and type '${`type`}', status: ${response.status.intValue()}"))
       }
@@ -80,20 +86,23 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
   override def insertRawDocument(client: String, tenant: String, `type`: String, document: String): Future[String] = {
 
-
     val request = HttpRequest(method = HttpMethods.POST,
       uri = s"$documentServiceUrl/$tenant/$client/data/${`type`}?rawwrite=true",
       entity = HttpEntity(ContentTypes.`application/json`, document),
       headers = getHeaders(client, tenant))
 
-    Http().singleRequest(request).flatMap {
+    Http()
+      .singleRequest(request)
+      .flatMap {
 
-      case response if response.status.isSuccess() ⇒
-        Unmarshal(response).to[InsertResult].map(_.id)
+        case response if response.status.isSuccess() ⇒
+          Unmarshal(response).to[InsertResult].map(_.id)
 
-      case response ⇒
-        Future.failed(new RuntimeException(s"Error occurred inserting raw document. Response code: ${response.status}"))
-    }
+        case response ⇒
+          response.discardEntityBytes()
+          Future.failed(new DocumentServiceClientException(
+            s"Failed to inserting raw document. Response code: ${response.status}"))
+      }
   }
 
   private def getHeaders(client: String, tenant: String): List[HttpHeader] = {

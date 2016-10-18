@@ -16,9 +16,14 @@ import akka.stream.scaladsl.Flow
 import cats.data.Xor
 import com.hybris.core.dbr.config.RestoreTypeConfig
 import com.hybris.core.dbr.document.DocumentServiceClient
+import com.hybris.core.dbr.exceptions.RestoreException
+import com.hybris.core.dbr.file.FileOps._
 import com.hybris.core.dbr.model.RestoreTypeData
+import io.circe.Json
 
-trait RestoreStream extends RestoreFileOps {
+import scala.concurrent.ExecutionContext
+
+trait RestoreStream {
 
   val Parallelism = 5
 
@@ -30,15 +35,24 @@ trait RestoreStream extends RestoreFileOps {
             documents.map(doc => RestoreTypeData(rtc.client, rtc.tenant, rtc.`type`, doc))
 
           case Xor.Left(error) =>
-            throw new RuntimeException(error.getMessage)
+            throw new RestoreException(error.getMessage)
         }
       }
   }
 
-  def insertDocuments(documentServiceClient: DocumentServiceClient): Flow[RestoreTypeData, String, NotUsed] = {
+  private def readDocuments(path: String): Xor[FileError, List[String]] = {
+    readFileAs[List[Json]](path).map(jsons => jsons.map(_.noSpaces))
+  }
+
+  def insertDocuments(documentServiceClient: DocumentServiceClient)
+                     (implicit executionContext: ExecutionContext): Flow[RestoreTypeData, String, NotUsed] = {
     Flow[RestoreTypeData]
       .mapAsync(Parallelism) { rtd =>
         documentServiceClient.insertRawDocument(rtd.client, rtd.tenant, rtd.`type`, rtd.document)
+          .recover {
+            case t: Throwable =>
+              throw new RestoreException(t.getMessage)
+          }
       }
   }
 }

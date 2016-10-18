@@ -19,7 +19,7 @@ import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.document.DocumentServiceClient
-import com.hybris.core.dbr.model.{ClientTenant, BackupType, BackupTypeData, BackupTypeResult}
+import com.hybris.core.dbr.model.{BackupType, BackupTypeData, BackupTypeResult, ClientTenant}
 import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.{Decoder, Json}
@@ -46,7 +46,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
         .toMat(TestSink.probe[ClientTenant])(Keep.both)
         .run()
 
-      sink.request(2)
+      sink.request(5)
 
       source.sendNext(ClientTenant("client1", "tenant1", None))
       source.sendNext(ClientTenant("client1", "tenant2", None))
@@ -68,7 +68,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
         .toMat(TestSink.probe[ClientTenant])(Keep.both)
         .run()
 
-      sink.request(2)
+      sink.request(5)
 
       source.sendNext(ClientTenant("client1", "tenant1", Some(List("type1", "type2"))))
       source.sendNext(ClientTenant("client1", "tenant2", Some(List("type1"))))
@@ -144,7 +144,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
         .toMat(TestSink.probe[BackupTypeResult])(Keep.both)
         .run()
 
-      sink.request(2)
+      sink.request(5)
 
       source.sendNext(BackupTypeData("client1", "tenant1", "type1", stream))
       source.sendComplete()
