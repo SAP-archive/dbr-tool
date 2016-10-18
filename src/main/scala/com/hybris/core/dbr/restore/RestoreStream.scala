@@ -12,6 +12,7 @@
 package com.hybris.core.dbr.restore
 
 import akka.NotUsed
+import akka.event.slf4j.SLF4JLogging
 import akka.stream.scaladsl.Flow
 import cats.data.Xor
 import com.hybris.core.dbr.config.RestoreTypeConfig
@@ -23,7 +24,7 @@ import io.circe.Json
 
 import scala.concurrent.ExecutionContext
 
-trait RestoreStream {
+trait RestoreStream extends SLF4JLogging {
 
   val Parallelism = 5
 
@@ -32,6 +33,7 @@ trait RestoreStream {
       .mapConcat { rtc =>
         readDocuments(s"$restoreDir/${rtc.file}") match {
           case Xor.Right(documents) =>
+            log.info(s"Documents for tenant '${rtc.tenant}' and type '${rtc.`type`}' were read from file")
             documents.map(doc => RestoreTypeData(rtc.client, rtc.tenant, rtc.`type`, doc))
 
           case Xor.Left(error) =>

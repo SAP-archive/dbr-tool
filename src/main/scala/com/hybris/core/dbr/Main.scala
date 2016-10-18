@@ -63,7 +63,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
   }
 
   private def doBackup(cliConfig: CliConfig, backupConfig: BackupConfig): Unit = {
-    logger.info("Starting backup")
+    logger.info(s"Starting backup of client: ${cliConfig.client}")
 
     implicit val system = ActorSystem("dbr")
     implicit val materializer = ActorMaterializer()
@@ -110,7 +110,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
   }
 
   private def doRestore(cliConfig: CliConfig, restoreConfig: RestoreConfig): Unit = {
-    logger.info("Starting restore")
+    logger.info(s"Starting restore of client: ${cliConfig.client}")
 
     implicit val system = ActorSystem("dbr")
     implicit val materializer = ActorMaterializer()

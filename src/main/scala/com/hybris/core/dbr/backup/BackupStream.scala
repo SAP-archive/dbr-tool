@@ -14,6 +14,7 @@ package com.hybris.core.dbr.backup
 import java.nio.file.Paths
 import java.util.UUID
 
+import akka.event.slf4j.SLF4JLogging
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Flow}
 import akka.{Done, NotUsed}
@@ -30,7 +31,7 @@ import scala.util.{Failure, Success}
 /**
  * Components of backup stream.
  */
-trait BackupStream {
+trait BackupStream extends SLF4JLogging {
 
   val Parallelism = 5
 
@@ -44,7 +45,18 @@ trait BackupStream {
       .mapAsync(Parallelism) { ct =>
         ct.types match {
           case Some(types) => Future.successful(ct)
-          case None => documentServiceClient.getTypes(ct.client, ct.tenant).map(types => ct.copy(types = Some(types)))
+          case None =>
+            val result = documentServiceClient
+              .getTypes(ct.client, ct.tenant)
+              .map(types => ct.copy(types = Some(types)))
+
+            result.onSuccess {
+              case elem =>
+                val typesStr = elem.types.map(_.mkString(", ")).getOrElse("none")
+                log.info(s"Types [$typesStr] for tenant '${elem.tenant}' received.")
+            }
+
+            result
         }
       }
   }
@@ -82,6 +94,8 @@ trait BackupStream {
           .flatMap { ioResult =>
             ioResult.status match {
               case Success(Done) =>
+                log.info(s"Documents for tenant '${btd.tenant}' " +
+                  s"and type '${btd.`type`}' written to file.")
                 Future.successful(BackupTypeResult(btd.client, btd.tenant, btd.`type`, fileName))
               case Failure(ex) =>
                 Future.failed(ex)
