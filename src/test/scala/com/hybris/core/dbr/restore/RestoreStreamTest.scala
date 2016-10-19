@@ -183,6 +183,4 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       error mustBe a[RestoreException]
     }
   }
-
-
 }

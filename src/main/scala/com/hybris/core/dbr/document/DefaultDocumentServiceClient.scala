@@ -26,7 +26,6 @@ import io.circe.generic.semiauto.deriveDecoder
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 class DefaultDocumentServiceClient(documentServiceUrl: String,
                                    token: Option[String])
                                   (implicit system: ActorSystem,

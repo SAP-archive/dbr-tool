@@ -18,7 +18,6 @@ import com.hybris.core.dbr.model.InternalAppError
 import io.circe._
 import io.circe.generic.semiauto._
 
-
 /**
  * Functions to read configuration from user provided JSONs.
  */

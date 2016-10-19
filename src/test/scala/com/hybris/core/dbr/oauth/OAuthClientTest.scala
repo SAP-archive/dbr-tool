@@ -23,7 +23,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-
 class OAuthClientTest extends BaseCoreTest with XorValues {
 
   implicit def defaultPatience: PatienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(200, Millis))
@@ -58,7 +57,6 @@ class OAuthClientTest extends BaseCoreTest with XorValues {
     case r: HttpRequest =>
       HttpResponse(StatusCodes.NotFound, entity = "Unknown resource!")
   }
-
 
   var binding: Http.ServerBinding = _
 

@@ -112,6 +112,4 @@ trait BackupStream extends SLF4JLogging {
         file.overwrite(summary.asJson.spaces4)
         Done
       }
-
-
 }

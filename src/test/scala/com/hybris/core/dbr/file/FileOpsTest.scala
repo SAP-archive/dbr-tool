@@ -152,6 +152,5 @@ class FileOpsTest extends BaseTest {
     }
   }
 
-
   private def cleanUp(path: String) = File(path).delete()
 }

@@ -11,7 +11,6 @@
 */
 package com.hybris.core.dbr.config
 
-
 /**
  * Functions for command line interface.
  */

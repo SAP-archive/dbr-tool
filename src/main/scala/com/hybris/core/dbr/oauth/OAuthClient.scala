@@ -23,7 +23,6 @@ import io.circe.generic.semiauto._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 trait OAuth {
 
   /**

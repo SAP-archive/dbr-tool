@@ -11,7 +11,6 @@
 */
 package com.hybris.core.dbr.model
 
-
 /**
  * Internal error of application.
  *

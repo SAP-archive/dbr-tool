@@ -11,7 +11,6 @@
 */
 package com.hybris.core.dbr.file
 
-
 import java.nio.file.{AccessDeniedException, NoSuchFileException}
 
 import better.files.File
