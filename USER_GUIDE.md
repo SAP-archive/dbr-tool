@@ -14,13 +14,13 @@ as they are written in the backup files, metadata information is not changed.
 
 ### Backup
 
-The backup reads documents from the Document service and stores them into files into the local file system. 
+The backup reads documents from the Document service and stores them in files on the local file system. 
 
-```
+``` bash
 $ dbr backup --env <env> --client <client> --config <config_file> --out <destination_dir>
 ```
 
-parameters: 
+Parameters: 
  
 -	`env` - name of an environment, possible values: us-prod, us-stage, eu
 -	`client` - name of the client for whom the operation is performed
@@ -31,7 +31,7 @@ Backup requires `CLIENT_ID` and `CLIENT_SECRET` environment variable to be set w
 
 Example:
 
-```
+``` bash
 $ export CLIENT_ID=<setme>
 $ export CLIENT_SECRET=<setme>
 
@@ -40,12 +40,11 @@ $ dbr backup --env us-prod  --client hybris.product --config config.json --out /
 
 #### Configuration file
 
-The configuration file for backup contains a list of tenants to be downloaded.
-Additionally we can specify which types should be downloaded. 
-If types are not provided, then all types will be included.
+The configuration file for backup contains a list of tenants to be downloaded. 
+Additionally you can specify which types should be downloaded. If types are not provided, then all of them will be included.
 
 
-```
+``` json
 {
 	"tenants" : [
 		{
@@ -58,46 +57,47 @@ If types are not provided, then all types will be included.
 }
 ```
 
-
 #### Outcome 
 
 The outcome of backup is a set of files in the destination directory. Every type is stored in a separate file as an array of JSONs. 
-The main file `backup.json` is a backup summary with details about the performed operation.  
+The main file `backup.json` is a backup summary generated automatically during backup with details about the performed operations.  
 
 ### Restore
 
 The restore operation imports data from files into the Document service. The input for this operation is 
-the backup's destination directory and the configuration file is the backup's summary file. 
-If you want to restore only a part of the data, you can limit the input by editing the configuration file.
+the backup's destination directory which includes the configuration file called `backup.json` (it'sbackup's summary file) 
+as well as files with data in form of `UUID.json`. 
+If you want to restore only a part of the data (e.g. some selected types), you can limit the input by editing the `backup.json`. 
+More information on the `backup.json` file is in the Configuration section.
 
-```
-$ dbr restore --env <env> --client <client> --config <config_file> --dir <source_dir>
+``` bash
+$ dbr restore --env <env> --client <client> --dir <source_dir>
 ```
 
-parameters: 
+Parameters: 
  
 -	`env` - name of an environment, possible values: us-prod, us-stage, eu
 -	`client` - name of the client for whom the operation is performed
--	`config_file` - file with restore configuration, contains a list of types to restore 
 -	`source_dir` - source directory with files containing data 
 
 Restore requires `CLIENT_ID` and `CLIENT_SECRET` environment variable to be set with appropriate auth credentials for getting access token.
 
 Example:
 
-```
+``` bash
 $ export CLIENT_ID=<setme>
 $ export CLIENT_SECRET=<setme>
 
-$ dbr restore --env us-prod --client hybris.product --config /tmp/hybris_product_backup/backup.json --dir /tmp/hybris_product_backup
+$ dbr restore --env us-prod --client hybris.product --dir /tmp/hybris_product_backup
 ```
 
 #### Configuration
 
-The configuration for restoration contains a list of types to be imported into Document service. 
-Each type's configuration holds information about a client, a tenant, a name of a type and a name of a file where documents are stored.
+The configuration for restoration contains a list of types to be imported into the Document service. 
+Each type's configuration holds an information about a client, tenant, type name and file name where the documents are stored.
+You can manipulate this file in order to selectively restore selected types.
 
-```
+``` json
 [
     {
         "client" : "hybris.product",
