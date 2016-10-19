@@ -1,4 +1,4 @@
-# Document Service Backup Tool
+# Document Service Backup Restore Tool
 
 Document service backup and restore tool, simply `dbr`, allows to backup data from Document service 
 and restore data to Document service. The backup operation reads documents from Document service and 
@@ -35,7 +35,7 @@ example:
 $ export CLIENT_ID=<setme>
 $ export CLIENT_SECRET=<setme>
 
-$ dsb backup --env us-prod  --client hybris.product --config config.json --out /tmp/hybris_product_backup
+$ dbr backup --env us-prod  --client hybris.product --config config.json --out /tmp/hybris_product_backup
 ```
 
 #### Configuration file
@@ -60,6 +60,9 @@ If types are not provided all types will be included.
 
 
 #### Outcome 
+
+The outcome of backup is set of files in destination directory. Every type is stored in separate file as an array of JSONs. 
+The main file `backup.json` is a backup summary with details about the performed operation.  
 
 ### Restore
 
@@ -86,7 +89,7 @@ example:
 $ export CLIENT_ID=<setme>
 $ export CLIENT_SECRET=<setme>
 
-$ dsb restore --env us-prod --client hybris.product --config /tmp/hybris_product_backup/backup.json --dir /tmp/hybris_product_backup
+$ dbr restore --env us-prod --client hybris.product --config /tmp/hybris_product_backup/backup.json --dir /tmp/hybris_product_backup
 ```
 
 #### Configuration
