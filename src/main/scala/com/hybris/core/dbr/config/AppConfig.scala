@@ -22,8 +22,8 @@ trait AppConfig {
 
   private lazy val config = ConfigFactory.load()
 
-  lazy val appName = config.getString("app.name")
-  lazy val appVersion = config.getString("app.version")
+  lazy val appName = BuildInfo.name
+  lazy val appVersion = BuildInfo.version
 
   lazy val environments = config.getList("environments.keys").unwrapped().asScala.toList
 

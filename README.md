@@ -16,7 +16,7 @@ and restore data to Document service.
 To build a distribution zip use command:
 
 ```
-sbt dist
+$ sbt clean test dist
 ```
 
 The Distribution zip will be created in `artifact` folder. 

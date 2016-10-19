@@ -76,9 +76,15 @@ scalacOptions ++= Seq(
   //  "-Y"
 )
 
+enablePlugins(BuildInfoPlugin)
+
+buildInfoKeys := Seq[BuildInfoKey](name, version)
+
+buildInfoPackage := "com.hybris.core.dbr.config"
+
 enablePlugins(JavaAppPackaging)
 
-packageName in Universal := name.value
+packageName in Universal := name.value + "-" + version.value
 
 target in Universal := file("artifact")
 
