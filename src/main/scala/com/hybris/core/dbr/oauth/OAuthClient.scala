@@ -26,10 +26,10 @@ import scala.concurrent.{ExecutionContext, Future}
 trait OAuth {
 
   /**
-   * Accesses the OAuth service and gets valid token.
-   *
-   * @return token.
-   */
+    * Accesses the OAuth service and gets valid token.
+    *
+    * @return token.
+    */
   def getToken: Future[String]
 
 }
@@ -50,7 +50,7 @@ class OAuthClient(oauthUri: String, clientId: String, clientSecret: String, scop
       "scope" → scopes.mkString(" ")
     ).toEntity)
 
-  def getToken: Future[String] = {
+  def getToken: Future[String] =
     Http()
       .singleRequest(getTokenRequest)
       .flatMap {
@@ -60,5 +60,4 @@ class OAuthClient(oauthUri: String, clientId: String, clientSecret: String, scop
         case response ⇒
           Future.failed(new RuntimeException(s"Failed to get token: ${response.status} $oauthUri"))
       }
-  }
 }
