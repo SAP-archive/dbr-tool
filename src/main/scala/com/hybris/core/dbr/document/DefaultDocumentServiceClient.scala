@@ -57,9 +57,8 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
         case response =>
           response.discardEntityBytes()
-          Future.failed(new DocumentServiceClientException(
-            s"Failed to get types for client '$client' and tenant '$tenant'," +
-              s" status: ${response.status.intValue()}"))
+          Future.failed(DocumentServiceClientException(s"Failed to get types for client '$client' and tenant '$tenant'," +
+            s" status: ${response.status.intValue()}"))
       }
   }
 
@@ -77,9 +76,8 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
         case response =>
           response.discardEntityBytes()
-          Future.failed(new DocumentServiceClientException(
-            s"Failed to get documents for client '$client',tenant '$tenant'" +
-              s" and type '${`type`}', status: ${response.status.intValue()}"))
+          Future.failed(DocumentServiceClientException(s"Failed to get documents for client '$client',tenant '$tenant'" +
+            s" and type '${`type`}', status: ${response.status.intValue()}"))
       }
   }
 
@@ -99,8 +97,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
         case response ⇒
           response.discardEntityBytes()
-          Future.failed(new DocumentServiceClientException(
-            s"Failed to inserting raw document. Response code: ${response.status}"))
+          Future.failed(DocumentServiceClientException(s"Failed to inserting raw document. Response code: ${response.status}"))
       }
   }
 

@@ -12,8 +12,6 @@
 package com.hybris.core.dbr.config
 
 import com.typesafe.config.ConfigFactory
-import collection.JavaConversions._
-
 
 import scala.collection.JavaConverters._
 
@@ -39,6 +37,6 @@ trait AppConfig {
 
   val clientSecret = config.getString("api.client.secret")
 
-  val scopes = config.getStringList("api.scopes").toList
+  val scopes = config.getStringList("api.scopes").asScala.toList
 
 }

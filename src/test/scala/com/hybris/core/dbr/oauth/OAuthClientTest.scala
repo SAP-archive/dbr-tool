@@ -15,7 +15,6 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.{ContentTypes, _}
 import akka.stream.ActorMaterializer
-import cats.scalatest.XorValues
 import com.hybris.core.dbr.BaseCoreTest
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -23,7 +22,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class OAuthClientTest extends BaseCoreTest with XorValues {
+class OAuthClientTest extends BaseCoreTest {
 
   implicit def defaultPatience: PatienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(200, Millis))
 

@@ -56,9 +56,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
       .flatMap { backupConfig =>
         prepareEmptyDir(cliConfig.backupDestinationDir)
           .map(ready => backupConfig)
-          .leftMap {
-            case error: FileError => InternalAppError(error.getMessage)
-          }
+          .leftMap(fileError => InternalAppError(fileError.getMessage))
       }
   }
 
@@ -79,7 +77,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
         val backupJob = new BackupService(documentServiceClient,
           cliConfig.backupDestinationDir, summaryFileName)
 
-        val cts = backupConfig.tenants.map(t => ClientTenant(cliConfig.client, t.tenant, t.types))
+        val cts = backupConfig.tenants.map(t => ClientTenant(cliConfig.client, t.tenant, t.types.getOrElse(List())))
 
         backupJob.runBackup(cts)
       }

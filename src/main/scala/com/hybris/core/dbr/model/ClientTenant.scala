@@ -18,4 +18,4 @@ package com.hybris.core.dbr.model
  * @param tenant name of a tenant
  * @param types optional list of types to backup
  */
-case class ClientTenant(client: String, tenant: String, types: Option[List[String]])
+case class ClientTenant(client: String, tenant: String, types: List[String])

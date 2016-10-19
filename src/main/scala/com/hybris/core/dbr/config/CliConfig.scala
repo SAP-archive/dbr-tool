@@ -13,8 +13,8 @@ package com.hybris.core.dbr.config
 
 case class CliConfig(command: String = "",
                      env: String = "",
-                     configFile: String = "",
                      client: String = "",
+                     configFile: String = "",
                      backupDestinationDir: String = "",
                      restoreSourceDir: String = "") {
 

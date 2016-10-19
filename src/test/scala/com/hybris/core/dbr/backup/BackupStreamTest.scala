@@ -48,13 +48,13 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
       sink.request(5)
 
-      source.sendNext(ClientTenant("client1", "tenant1", None))
-      source.sendNext(ClientTenant("client1", "tenant2", None))
+      source.sendNext(ClientTenant("client1", "tenant1", List()))
+      source.sendNext(ClientTenant("client1", "tenant2", List()))
       source.sendComplete()
 
       sink.expectNextUnordered(
-        ClientTenant("client1", "tenant1", Some(List("type1", "type2"))),
-        ClientTenant("client1", "tenant2", Some(List("type1")))
+        ClientTenant("client1", "tenant1", List("type1", "type2")),
+        ClientTenant("client1", "tenant2", List("type1"))
       )
       sink.expectComplete()
     }
@@ -70,13 +70,13 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
       sink.request(5)
 
-      source.sendNext(ClientTenant("client1", "tenant1", Some(List("type1", "type2"))))
-      source.sendNext(ClientTenant("client1", "tenant2", Some(List("type1"))))
+      source.sendNext(ClientTenant("client1", "tenant1", List("type1", "type2")))
+      source.sendNext(ClientTenant("client1", "tenant2", List("type1")))
       source.sendComplete()
 
       sink.expectNextUnordered(
-        ClientTenant("client1", "tenant1", Some(List("type1", "type2"))),
-        ClientTenant("client1", "tenant2", Some(List("type1")))
+        ClientTenant("client1", "tenant1", List("type1", "type2")),
+        ClientTenant("client1", "tenant2", List("type1"))
       )
       sink.expectComplete()
 
@@ -92,10 +92,9 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
       sink.request(5)
 
-      source.sendNext(ClientTenant("client1", "tenant1", Some(List("type1", "type2"))))
-      source.sendNext(ClientTenant("client1", "tenant2", Some(List())))
-      source.sendNext(ClientTenant("client1", "tenant3", None))
-      source.sendNext(ClientTenant("client1", "tenant4", Some(List("type1"))))
+      source.sendNext(ClientTenant("client1", "tenant1", List("type1", "type2")))
+      source.sendNext(ClientTenant("client1", "tenant2", List()))
+      source.sendNext(ClientTenant("client1", "tenant4", List("type1")))
       source.sendComplete()
 
       sink.expectNext(BackupType("client1", "tenant1", "type1"))
