@@ -26,9 +26,9 @@ class CliTest extends BaseTest with Cli {
 
     "read cli config for restore" in {
 
-      val args = Array("restore", "--env", "us-prod", "--client", "hybris.space", "--config", "space.json", "--dir", "/nasa/moon")
+      val args = Array("restore", "--env", "us-prod", "--client", "hybris.space", "--dir", "/nasa/moon")
 
-      readCliConfig(args).value mustBe CliConfig("restore", "us-prod", "hybris.space", "space.json", "", "/nasa/moon")
+      readCliConfig(args).value mustBe CliConfig("restore", "us-prod", "hybris.space", "", "", "/nasa/moon")
     }
 
     "validate environment" in {

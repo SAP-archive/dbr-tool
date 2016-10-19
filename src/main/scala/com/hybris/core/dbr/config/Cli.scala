@@ -34,36 +34,31 @@ trait Cli extends AppConfig {
       .text("hybris client")
       .required()
 
-    opt[String]("config")
-      .action((cf, cfg) => cfg.copy(configFile = cf))
-      .text("path to configuration file for backup or restore")
-      .required()
-
     note("")
 
     cmd("backup")
       .action((_, cfg) => cfg.copy(command = "backup"))
-      .children {
-
+      .children(
+        opt[String]("config")
+          .action((cf, cfg) => cfg.copy(configFile = cf))
+          .text("path to configuration file for backup or restore")
+          .required(),
         opt[String]("out")
           .action((dstDir, cfg) => cfg.copy(backupDestinationDir = dstDir))
           .text("destination folder")
           .required()
-
-      }
+      )
 
     note("")
 
     cmd("restore")
       .action((_, cfg) => cfg.copy(command = "restore"))
-      .children {
-
+      .children(
         opt[String]("dir")
           .action((srcDir, cfg) => cfg.copy(restoreSourceDir = srcDir))
           .text("directory with backup files")
           .required()
-
-      }
+      )
   }
 
   def readCliConfig(args: Array[String]): Option[CliConfig] = {

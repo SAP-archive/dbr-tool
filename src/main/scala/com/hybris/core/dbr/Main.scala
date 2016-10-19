@@ -104,7 +104,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
   }
 
   private def prepareRestore(cliConfig: CliConfig): Xor[InternalAppError, RestoreConfig] = {
-    readRestoreConfig(cliConfig.configFile)
+    readRestoreConfig(s"${cliConfig.restoreSourceDir}/$summaryFileName")
   }
 
   private def doRestore(cliConfig: CliConfig, restoreConfig: RestoreConfig): Unit = {
