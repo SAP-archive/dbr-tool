@@ -20,7 +20,7 @@ The backup reads documents from the Document service and stores them in files on
 $ dbr backup --env <env> --client <client> --config <config_file> --out <destination_dir>
 ```
 
-parameters: 
+Parameters: 
  
 -	`env` - name of an environment, possible values: us-prod, us-stage, eu
 -	`client` - name of the client for whom the operation is performed
@@ -40,9 +40,8 @@ $ dbr backup --env us-prod  --client hybris.product --config config.json --out /
 
 #### Configuration file
 
-The configuration file for backup contains a list of tenants to be downloaded.
-Additionally we can specify which types should be downloaded. 
-If types are not provided, then all types will be included.
+The configuration file for backup contains a list of tenants to be downloaded. 
+Additionally you can specify which types should be downloaded. If types are not provided, then all of them will be included.
 
 
 ``` json
@@ -58,11 +57,10 @@ If types are not provided, then all types will be included.
 }
 ```
 
-
 #### Outcome 
 
 The outcome of backup is a set of files in the destination directory. Every type is stored in a separate file as an array of JSONs. 
-The main file `backup.json` is a backup summary with details about the performed operation.  
+The main file `backup.json` is a backup summary generated automatically during backup with details about the performed operations.  
 
 ### Restore
 
@@ -76,7 +74,7 @@ More information on the `backup.json` file is in the Configuration section.
 $ dbr restore --env <env> --client <client> --dir <source_dir>
 ```
 
-parameters: 
+Parameters: 
  
 -	`env` - name of an environment, possible values: us-prod, us-stage, eu
 -	`client` - name of the client for whom the operation is performed
