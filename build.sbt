@@ -18,7 +18,7 @@ scalaVersion := "2.11.8"
 
 libraryDependencies ++= {
   val akkaVersion = "2.4.11"
-  val circeVersion = "0.5.3"
+  val circeVersion = "0.5.4"
 
   Seq(
     "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion,

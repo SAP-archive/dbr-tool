@@ -104,7 +104,7 @@ trait BackupStream extends SLF4JLogging {
       }
   }
 
-  def writeSummary(destinationDir: String, fileName: String): Flow[BackupTypeResult, Done, NotUsed] = {
+  def writeSummary(destinationDir: String, fileName: String): Flow[BackupTypeResult, Done, NotUsed] =
     Flow[BackupTypeResult]
       .fold(List[BackupTypeResult]())((acc, btr) => acc :+ btr)
       .map { summary =>
@@ -112,6 +112,6 @@ trait BackupStream extends SLF4JLogging {
         file.overwrite(summary.asJson.spaces4)
         Done
       }
-  }
+
 
 }

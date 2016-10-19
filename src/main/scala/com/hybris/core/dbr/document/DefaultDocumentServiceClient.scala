@@ -40,7 +40,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
   private case class GetTypesResponse(types: List[String])
 
   private implicit val getTypesResponseDecoder: Decoder[GetTypesResponse] = deriveDecoder
-  private implicit val insertResulttDecoder: Decoder[InsertResult] = deriveDecoder
+  private implicit val insertResultDecoder: Decoder[InsertResult] = deriveDecoder
 
   private val authorizationHeader = token.map(t => Authorization(OAuth2BearerToken(t)))
 
