@@ -82,3 +82,5 @@ enablePlugins(JavaAppPackaging)
 packageName in Universal := name.value
 
 target in Universal := file("artifact")
+
+mappings in Universal in packageBin += file("USER_GUIDE.md") -> "README.md"
