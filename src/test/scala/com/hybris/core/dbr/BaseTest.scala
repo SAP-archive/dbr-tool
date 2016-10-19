@@ -26,5 +26,5 @@ trait BaseTest
   with MockFactory
   with BeforeAndAfterAll {
 
-  def randomName = Random.alphanumeric take 10 mkString
+  def randomName: String = Random.alphanumeric take 10 mkString
 }

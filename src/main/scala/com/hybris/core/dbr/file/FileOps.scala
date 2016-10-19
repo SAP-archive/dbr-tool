@@ -25,7 +25,7 @@ object FileOps {
   case object Ready
 
   sealed class FileError(message: String) {
-    def getMessage = message
+    def getMessage: String = message
   }
 
   case class GenericFileError(message: String) extends FileError(message)
