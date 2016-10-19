@@ -36,8 +36,7 @@ trait RestoreStream extends SLF4JLogging {
             log.info(s"Documents for tenant '${rtc.tenant}' and type '${rtc.`type`}' were read from file")
             documents.map(doc => RestoreTypeData(rtc.client, rtc.tenant, rtc.`type`, doc))
 
-          case Xor.Left(error) =>
-            throw new RestoreException(error.getMessage)
+          case Xor.Left(error) => throw RestoreException(error.getMessage)
         }
       }
   }
@@ -52,8 +51,7 @@ trait RestoreStream extends SLF4JLogging {
       .mapAsync(Parallelism) { rtd =>
         documentServiceClient.insertRawDocument(rtd.client, rtd.tenant, rtd.`type`, rtd.document)
           .recover {
-            case t: Throwable =>
-              throw new RestoreException(t.getMessage)
+            case t: Throwable => throw RestoreException(t.getMessage)
           }
       }
   }
