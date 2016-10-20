@@ -34,6 +34,8 @@ trait Cli extends AppConfig {
       .text("hybris client")
       .required()
 
+    help("help").text("prints this usage text")
+
     note("")
 
     cmd("backup")
@@ -41,7 +43,7 @@ trait Cli extends AppConfig {
       .children(
         opt[String]("config")
           .action((cf, cfg) => cfg.copy(configFile = cf))
-          .text("path to configuration file for backup or restore")
+          .text("path to configuration file for backup")
           .required(),
         opt[String]("out")
           .action((dstDir, cfg) => cfg.copy(backupDestinationDir = dstDir))
