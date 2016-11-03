@@ -17,18 +17,9 @@ import akka.util.ByteString
 import scala.concurrent.Future
 
 /**
-  * Client for Document service.
+  * Client for Document Backup service.
   */
 trait DocumentBackupClient {
-
-  /**
-    * Returns lists of types for given client and tenant.
-    *
-    * @param client client responsible for types
-    * @param tenant tenant using types
-    * @return future with list of types
-    */
-  def getTypes(client: String, tenant: String): Future[List[String]]
 
   /**
     * Returns all documents of given type as a stream of data.

@@ -38,29 +38,6 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
 
   "DefaultDocumentBackupClient" should {
 
-    "get types" in {
-
-      val types = client.getTypes("client.token", "typesTenant").futureValue
-
-      types must contain theSameElementsAs List("type1", "type2")
-    }
-
-    "get types without token" in {
-
-      val client = new DefaultDocumentBackupClient("http://localhost:9876", None)
-
-      val types = client.getTypes("client.notoken", "typesTenant").futureValue
-
-      types must contain theSameElementsAs List("type1", "type2")
-    }
-
-    "handle bad response when getting types" in {
-
-      val result = client.getTypes("client.bad", "typesTenant").failed.futureValue
-
-      result mustBe a[DocumentBackupClientException]
-    }
-
     "get documents" in {
 
       val stream = client.getDocuments("client.token", "documentsTenant", "items").futureValue
@@ -97,50 +74,22 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
   }
 
   val route =
-    pathPrefix("typesTenant") {
+    pathPrefix("documentsTenant") {
       get {
-        path("client.token") {
+        path("client.token" / "data" / "items") {
           headerValuePF(extractToken) { token =>
             if (token == "token") {
-              complete(HttpEntity(ContentTypes.`application/json`, """{"types" : ["type1", "type2"]}"""))
+              complete(HttpEntity(ContentTypes.`application/json`, """[{"doc":1},{"doc":2}]"""))
             } else {
               complete(StatusCodes.BadRequest)
             }
           }
         } ~
-          path("client.notoken") {
-            headerValueByName("hybris-client") { client =>
-              headerValueByName("hybris-tenant") { tenant =>
-                (client, tenant) match {
-                  case ("client.notoken", "typesTenant") =>
-                    complete(HttpEntity(ContentTypes.`application/json`, """{"types" : ["type1", "type2"]}"""))
-                  case _ ⇒
-                    complete(StatusCodes.BadRequest)
-                }
-              }
-            }
-          } ~
-          path("client.bad") {
+          path("client.bad" / "data" / "items") {
             complete(StatusCodes.BadRequest)
           }
       }
     } ~
-      pathPrefix("documentsTenant") {
-        get {
-          path("client.token" / "data" / "items") {
-            headerValuePF(extractToken) { token =>
-              if (token == "token") {
-                complete(HttpEntity(ContentTypes.`application/json`, """[{"doc":1},{"doc":2}]"""))
-              } else {
-                complete(StatusCodes.BadRequest)
-              }
-            }
-          } ~
-            path("client.bad" / "data" / "items") {
-              complete(StatusCodes.BadRequest)
-            }
-        }
-      } ~
       pathPrefix("insertTenant") {
         post {
           path("client.token" / "data" / "items") {

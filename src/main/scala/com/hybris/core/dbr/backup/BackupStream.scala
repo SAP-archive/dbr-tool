@@ -19,7 +19,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Flow}
 import akka.{Done, NotUsed}
 import better.files.File
-import com.hybris.core.dbr.document.DocumentBackupClient
+import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient}
 import com.hybris.core.dbr.model._
 import io.circe._
 import io.circe.generic.semiauto._
@@ -39,7 +39,7 @@ trait BackupStream extends SLF4JLogging {
 
   implicit val typeBackupResultEncoder: Encoder[BackupTypeResult] = deriveEncoder
 
-  def addTypes(documentBackupClient: DocumentBackupClient)
+  def addTypes(documentServiceClient: DocumentServiceClient)
               (implicit executionContext: ExecutionContext): Flow[ClientTenant, ClientTenant, NotUsed] = {
     Flow[ClientTenant]
       .mapAsync(Parallelism) { ct =>
@@ -47,7 +47,7 @@ trait BackupStream extends SLF4JLogging {
           Future.successful(ct)
         }
         else {
-          val result = documentBackupClient
+          val result = documentServiceClient
             .getTypes(ct.client, ct.tenant)
             .map(types => ct.copy(types = types))
 

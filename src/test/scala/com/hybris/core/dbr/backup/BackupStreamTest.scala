@@ -18,7 +18,7 @@ import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
-import com.hybris.core.dbr.document.DocumentBackupClient
+import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient}
 import com.hybris.core.dbr.model.{BackupType, BackupTypeData, BackupTypeResult, ClientTenant}
 import io.circe.generic.semiauto._
 import io.circe.parser._
@@ -36,13 +36,13 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
     "add types when not provided" in {
 
-      val documentBackupClient = stub[DocumentBackupClient]
+      val documentServiceClient = stub[DocumentServiceClient]
 
-      (documentBackupClient.getTypes _).when("client1", "tenant1").returns(Future.successful(List("type1", "type2")))
-      (documentBackupClient.getTypes _).when("client1", "tenant2").returns(Future.successful(List("type1")))
+      (documentServiceClient.getTypes _).when("client1", "tenant1").returns(Future.successful(List("type1", "type2")))
+      (documentServiceClient.getTypes _).when("client1", "tenant2").returns(Future.successful(List("type1")))
 
       val (source, sink) = TestSource.probe[ClientTenant]
-        .via(addTypes(documentBackupClient))
+        .via(addTypes(documentServiceClient))
         .toMat(TestSink.probe[ClientTenant])(Keep.both)
         .run()
 
@@ -61,10 +61,10 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
     "not get types when already provided" in {
 
-      val documentBackupClient = stub[DocumentBackupClient]
+      val documentServiceClient = stub[DocumentServiceClient]
 
       val (source, sink) = TestSource.probe[ClientTenant]
-        .via(addTypes(documentBackupClient))
+        .via(addTypes(documentServiceClient))
         .toMat(TestSink.probe[ClientTenant])(Keep.both)
         .run()
 
@@ -80,7 +80,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       )
       sink.expectComplete()
 
-      (documentBackupClient.getTypes _).verify(*, *).never()
+      (documentServiceClient.getTypes _).verify(*, *).never()
     }
 
     "flatten types" in {

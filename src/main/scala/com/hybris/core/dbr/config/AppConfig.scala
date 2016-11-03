@@ -29,7 +29,8 @@ trait AppConfig {
 
   lazy val summaryFileName = config.getString("summary-file-name")
 
-  def documentUrl(env: String): String = config.getString(s"environments.$env.document-backup-url")
+  def documentServiceUrl(env: String): String = config.getString(s"environments.$env.document-url")
+  def documentBackupUrl(env: String): String = config.getString(s"environments.$env.document-backup-url")
 
   def oauthUrl(env: String): String = config.getString(s"environments.$env.oauth-url")
 

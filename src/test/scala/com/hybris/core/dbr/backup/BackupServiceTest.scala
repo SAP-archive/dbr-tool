@@ -18,7 +18,7 @@ import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.FileConfig
-import com.hybris.core.dbr.document.DocumentBackupClient
+import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient}
 import com.hybris.core.dbr.model.ClientTenant
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -42,13 +42,14 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       val type2Stream = Source(List("[", """{"type2":1}""", "]")).map(ByteString(_))
 
       val documentBackupClient = stub[DocumentBackupClient]
-      (documentBackupClient.getTypes _).when("client", "tenant").returns(Future.successful(List("type1", "type2")))
+      val documentServiceClient = stub[DocumentServiceClient]
+      (documentServiceClient.getTypes _).when("client", "tenant").returns(Future.successful(List("type1", "type2")))
       (documentBackupClient.getDocuments _).when("client", "tenant", "type1")
         .returns(Future.successful(type1Stream))
       (documentBackupClient.getDocuments _).when("client", "tenant", "type2")
         .returns(Future.successful(type2Stream))
 
-      val backupService = new BackupService(documentBackupClient, dstDir.pathAsString, "backup.json")
+      val backupService = new BackupService(documentBackupClient, documentServiceClient, dstDir.pathAsString, "backup.json")
 
       // when
       val result = backupService.runBackup(List(ClientTenant("client", "tenant", List()))).futureValue
