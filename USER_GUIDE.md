@@ -1,14 +1,14 @@
 # Document Service Backup Restore Tool
 
 Document service backup and restore tool, or simply `dbr`, allows to backup data from Document service 
-and restore data to Document service. The backup operation reads documents from the Document service and 
-writes them as JSONs to files in a designated directory. This directory can be later used for restoration.
+and restore data to Document service. The backup operation reads your documents from the Document service
+using the Document Backup and writes them as JSONs to files in a designated directory. 
+This directory can be later used for restoration.
   
 Both operations have an option to choose an environment. `dbr` supports all available environments 
 (__us-prod__, __us-stage__, __eu__). With this, it is possible to migrate data from one environment to another.
      
-The restore operation uses Document service's _raw write_ feature. Documents are being inserted 
-as they are written in the backup files, metadata information is not changed. 
+Documents are being inserted as they are written in the backup files with all metadata and data types preserved. 
 
 ## Usage
 
@@ -29,7 +29,7 @@ In case you get `permission denied: bin/dbr`, just `chmod +x bin/dbr`.
 
 ### Backup
 
-The backup reads documents from the Document service and stores them in files on the local file system. 
+The backup reads documents from the Document Backup service and stores them in files on the local file system. 
 
 ``` bash
 $ bin/dbr backup --env <env> --client <client> --config <config_file> --out <destination_dir>
@@ -79,7 +79,7 @@ The main file `backup.json` is a backup summary generated automatically during b
 
 ### Restore
 
-The restore operation imports data from files into the Document service. The input for this operation is 
+The restore operation imports data from files into the Document Backup. The input for this operation is 
 the backup's destination directory which includes the configuration file called `backup.json` (it's backup's summary file) 
 as well as files with data in form of `UUID.json`. 
 If you want to restore only a part of the data (e.g. some selected types), you can limit the input by editing the `backup.json`. 
@@ -108,7 +108,7 @@ $ bin/dbr restore --env us-prod --client hybris.product --dir tmp/hybris_product
 
 #### Configuration
 
-The configuration for restoration contains a list of types to be imported into the Document service. 
+The configuration for restoration contains a list of types to be imported into the Document Backup. 
 Each type's configuration holds an information about a client, tenant, type name and file name where the documents are stored.
 You can manipulate this file in order to selectively restore selected types.
 
