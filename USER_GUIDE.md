@@ -2,7 +2,7 @@
 
 Document service backup and restore tool, or simply `dbr`, allows to backup data from Document service 
 and restore data to Document service. The backup operation reads your documents from the Document service
-using the Document Backup and writes them as JSONs to files in a designated directory. 
+using the Document Backup and writes them as extended JSONs to files in a designated directory. 
 This directory can be later used for restoration.
   
 Both operations have an option to choose an environment. `dbr` supports all available environments 
@@ -74,12 +74,12 @@ Additionally you can specify which types should be downloaded. If types are not 
 
 #### Outcome 
 
-The outcome of backup is a set of files in the destination directory. Every type is stored in a separate file as an array of JSONs. 
+The outcome of backup is a set of files in the destination directory. Every type is stored in a separate file as an array of extended JSONs. 
 The main file `backup.json` is a backup summary generated automatically during backup with details about the performed operations.  
 
 ### Restore
 
-The restore operation imports data from files into the Document Backup. The input for this operation is 
+The restore operation imports data from files into the Document Backup service. The input for this operation is 
 the backup's destination directory which includes the configuration file called `backup.json` (it's backup's summary file) 
 as well as files with data in form of `UUID.json`. 
 If you want to restore only a part of the data (e.g. some selected types), you can limit the input by editing the `backup.json`. 
