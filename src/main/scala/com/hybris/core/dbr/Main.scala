@@ -16,7 +16,7 @@ import akka.stream.ActorMaterializer
 import cats.data.Xor
 import com.hybris.core.dbr.backup.BackupService
 import com.hybris.core.dbr.config._
-import com.hybris.core.dbr.document.DefaultDocumentServiceClient
+import com.hybris.core.dbr.document.DefaultDocumentBackupClient
 import com.hybris.core.dbr.file.FileOps._
 import com.hybris.core.dbr.model.{ClientTenant, InternalAppError}
 import com.hybris.core.dbr.oauth.OAuthClient
@@ -72,9 +72,9 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
     val result = getOAuthToken(cliConfig.env, oauthClient)
       .flatMap { token =>
-        val documentServiceClient = new DefaultDocumentServiceClient(documentUrl(cliConfig.env), token)
+        val documentBackupClient = new DefaultDocumentBackupClient(documentUrl(cliConfig.env), token)
 
-        val backupJob = new BackupService(documentServiceClient,
+        val backupJob = new BackupService(documentBackupClient,
           cliConfig.backupDestinationDir, summaryFileName)
 
         val cts = backupConfig.tenants.map(t => ClientTenant(cliConfig.client, t.tenant, t.types.getOrElse(List())))
@@ -119,9 +119,9 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
     val result = getOAuthToken(cliConfig.env, oauthClient)
       .flatMap { token =>
-        val documentServiceClient = new DefaultDocumentServiceClient(documentUrl(cliConfig.env), token)
+        val documentBackupClient = new DefaultDocumentBackupClient(documentUrl(cliConfig.env), token)
 
-        val restoreService = new RestoreService(documentServiceClient, cliConfig.restoreSourceDir)
+        val restoreService = new RestoreService(documentBackupClient, cliConfig.restoreSourceDir)
 
         restoreService.restore(restoreConfig.types)
       }

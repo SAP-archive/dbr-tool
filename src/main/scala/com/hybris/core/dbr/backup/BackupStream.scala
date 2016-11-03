@@ -19,7 +19,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Flow}
 import akka.{Done, NotUsed}
 import better.files.File
-import com.hybris.core.dbr.document.DocumentServiceClient
+import com.hybris.core.dbr.document.DocumentBackupClient
 import com.hybris.core.dbr.model._
 import io.circe._
 import io.circe.generic.semiauto._
@@ -29,8 +29,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 /**
- * Components of backup stream.
- */
+  * Components of backup stream.
+  */
 trait BackupStream extends SLF4JLogging {
 
   val Parallelism = 5
@@ -39,13 +39,15 @@ trait BackupStream extends SLF4JLogging {
 
   implicit val typeBackupResultEncoder: Encoder[BackupTypeResult] = deriveEncoder
 
-  def addTypes(documentServiceClient: DocumentServiceClient)
+  def addTypes(documentBackupClient: DocumentBackupClient)
               (implicit executionContext: ExecutionContext): Flow[ClientTenant, ClientTenant, NotUsed] = {
     Flow[ClientTenant]
       .mapAsync(Parallelism) { ct =>
-        if (ct.types.nonEmpty) Future.successful(ct)
+        if (ct.types.nonEmpty) {
+          Future.successful(ct)
+        }
         else {
-          val result = documentServiceClient
+          val result = documentBackupClient
             .getTypes(ct.client, ct.tenant)
             .map(types => ct.copy(types = types))
 
@@ -67,11 +69,11 @@ trait BackupStream extends SLF4JLogging {
       }
   }
 
-  def addDocuments(documentServiceClient: DocumentServiceClient)
+  def addDocuments(documentBackupClient: DocumentBackupClient)
                   (implicit executionContext: ExecutionContext): Flow[BackupType, BackupTypeData, NotUsed] = {
     Flow[BackupType]
       .mapAsync(DataParallelism) { bt =>
-        documentServiceClient.getDocuments(bt.client, bt.tenant, bt.`type`)
+        documentBackupClient.getDocuments(bt.client, bt.tenant, bt.`type`)
           .map { data =>
             BackupTypeData(bt.client, bt.tenant, bt.`type`, data)
           }

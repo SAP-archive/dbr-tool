@@ -11,4 +11,15 @@
  */
 package com.hybris.core.dbr.model
 
-case class RestoreTypeData(client: String, tenant: String, `type`: String, document: String)
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
+
+/**
+  * Represents a type: client, tenant and a stream of data.
+  *
+  * @param client    of the type
+  * @param tenant    of the type
+  * @param `type`    name
+  * @param documents stream of bytestring documents
+  */
+case class RestoreTypeData(client: String, tenant: String, `type`: String, documents: Source[ByteString, _])

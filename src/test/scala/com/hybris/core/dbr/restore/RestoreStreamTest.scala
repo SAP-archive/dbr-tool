@@ -11,13 +11,16 @@
 */
 package com.hybris.core.dbr.restore
 
+import java.nio.file.Paths
+
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Keep
+import akka.stream.scaladsl.{FileIO, Keep}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
+import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.RestoreTypeConfig
-import com.hybris.core.dbr.document.DocumentServiceClient
+import com.hybris.core.dbr.document.DocumentBackupClient
 import com.hybris.core.dbr.exceptions.RestoreException
 import com.hybris.core.dbr.model.RestoreTypeData
 
@@ -26,6 +29,7 @@ import scala.concurrent.Future
 class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
   implicit val materializer = ActorMaterializer()
+
   import system.dispatcher
 
   "RestoreStream" should {
@@ -58,36 +62,37 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .toMat(TestSink.probe[RestoreTypeData])(Keep.both)
         .run()
 
-      sink.request(10)
+      sink.request(2)
 
       source.sendNext(RestoreTypeConfig("client", "tenant1", "type1", fileName1))
       source.sendNext(RestoreTypeConfig("client", "tenant1", "type2", fileName2))
       source.sendComplete()
 
-      sink.expectNext(RestoreTypeData("client", "tenant1", "type1", """{"file1":1}"""))
-      sink.expectNext(RestoreTypeData("client", "tenant1", "type1", """{"file1":2}"""))
-      sink.expectNext(RestoreTypeData("client", "tenant1", "type2", """{"file2":1}"""))
-      sink.expectNext(RestoreTypeData("client", "tenant1", "type2", """{"file2":2}"""))
-      sink.expectNext(RestoreTypeData("client", "tenant1", "type2", """{"file2":3}"""))
-      sink.expectComplete()
-    }
+      sink.expectNextPF {
+        case RestoreTypeData("client", "tenant1", "type1", documents) ⇒
+          documents
+            .runWith(TestSink.probe[ByteString])
+            .request(1)
+            .expectNextPF {
+              case documents: ByteString ⇒
+                documents.utf8String must include("""{ "file1" : 1 }""")
+                documents.utf8String must include("""{ "file1" : 2 }""")
+            }
+      }
 
-    "omit type's files without documents" in {
+      sink.expectNextPF {
+        case RestoreTypeData("client", "tenant1", "type2", documents) ⇒
+          documents
+            .runWith(TestSink.probe[ByteString])
+            .request(1)
+            .expectNextPF {
+              case documents: ByteString ⇒
+                documents.utf8String must include("""{ "file2" : 1 }""")
+                documents.utf8String must include("""{ "file2" : 2 }""")
+                documents.utf8String must include("""{ "file2" : 3 }""")
+            }
 
-      val testDir = File.newTemporaryDirectory()
-      val fileName = randomName
-
-      testDir / fileName overwrite "[]"
-
-      val (source, sink) = TestSource.probe[RestoreTypeConfig]
-        .via(addDocuments(testDir.pathAsString))
-        .toMat(TestSink.probe[RestoreTypeData])(Keep.both)
-        .run()
-
-      sink.request(10)
-
-      source.sendNext(RestoreTypeConfig("client", "tenant1", "type1", fileName))
-      source.sendComplete()
+      }
 
       sink.expectComplete()
     }
@@ -113,70 +118,51 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       error.getMessage must include("not found")
     }
 
-    "fail when type's file not an array of documents" in {
-
-      val testDir = File.newTemporaryDirectory()
-      val fileName = randomName
-
-      testDir / fileName overwrite "not a json"
-
-      val (source, sink) = TestSource.probe[RestoreTypeConfig]
-        .via(addDocuments(testDir.pathAsString))
-        .toMat(TestSink.probe[RestoreTypeData])(Keep.both)
-        .run()
-
-      sink.request(10)
-
-      source.sendNext(RestoreTypeConfig("client", "tenant1", "type1", fileName))
-      source.sendComplete()
-
-      val error = sink.expectError()
-      error mustBe a[RestoreException]
-      error.getMessage must include(fileName)
-    }
-
     "insert documents" in {
 
-      val documentServiceClient = stub[DocumentServiceClient]
+      val documentBackupClient = stub[DocumentBackupClient]
+      val fileSource1 = FileIO.fromPath(Paths.get("a"))
+      val fileSource2 = FileIO.fromPath(Paths.get("b"))
 
-      (documentServiceClient.insertRawDocument _)
-        .when("client", "tenant1", "type1", """{"file1":1}""")
-        .returns(Future.successful("id1"))
-      (documentServiceClient.insertRawDocument _)
-        .when("client", "tenant1", "type1", """{"file1":2}""")
-        .returns(Future.successful("id2"))
+      (documentBackupClient.insertRawDocuments _)
+        .when("client", "tenant1", "type1", fileSource1)
+        .returns(Future.successful(1))
+      (documentBackupClient.insertRawDocuments _)
+        .when("client", "tenant1", "type1", fileSource2)
+        .returns(Future.successful(1))
 
       val (source, sink) = TestSource.probe[RestoreTypeData]
-        .via(insertDocuments(documentServiceClient))
-        .toMat(TestSink.probe[String])(Keep.both)
+        .via(insertDocuments(documentBackupClient))
+        .toMat(TestSink.probe[Int])(Keep.both)
         .run()
 
       sink.request(10)
 
-      source.sendNext(RestoreTypeData("client", "tenant1", "type1", """{"file1":1}"""))
-      source.sendNext(RestoreTypeData("client", "tenant1", "type1", """{"file1":2}"""))
+      source.sendNext(RestoreTypeData("client", "tenant1", "type1", fileSource1))
+      source.sendNext(RestoreTypeData("client", "tenant1", "type1", fileSource2))
       source.sendComplete()
 
-      sink.expectNextUnordered("id1", "id2")
+      sink.expectNextUnordered(1, 1)
       sink.expectComplete()
     }
 
     "fail when inserting document fails" in {
 
-      val documentServiceClient = stub[DocumentServiceClient]
+      val documentBackupClient = stub[DocumentBackupClient]
+      val fileSource1 = FileIO.fromPath(Paths.get("a"))
 
-      (documentServiceClient.insertRawDocument _)
-        .when("client", "tenant1", "type1", """{"file1":1}""")
+      (documentBackupClient.insertRawDocuments _)
+        .when("client", "tenant1", "type1", fileSource1)
         .returns(Future.failed(new RuntimeException("some error")))
 
       val (source, sink) = TestSource.probe[RestoreTypeData]
-        .via(insertDocuments(documentServiceClient))
-        .toMat(TestSink.probe[String])(Keep.both)
+        .via(insertDocuments(documentBackupClient))
+        .toMat(TestSink.probe[Int])(Keep.both)
         .run()
 
       sink.request(10)
 
-      source.sendNext(RestoreTypeData("client", "tenant1", "type1", """{"file1":1}"""))
+      source.sendNext(RestoreTypeData("client", "tenant1", "type1", fileSource1))
       source.sendComplete()
 
       val error = sink.expectError()

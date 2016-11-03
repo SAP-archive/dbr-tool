@@ -18,7 +18,7 @@ import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
-import com.hybris.core.dbr.document.DocumentServiceClient
+import com.hybris.core.dbr.document.DocumentBackupClient
 import com.hybris.core.dbr.model.{BackupType, BackupTypeData, BackupTypeResult, ClientTenant}
 import io.circe.generic.semiauto._
 import io.circe.parser._
@@ -36,13 +36,13 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
     "add types when not provided" in {
 
-      val documentServiceClient = stub[DocumentServiceClient]
+      val documentBackupClient = stub[DocumentBackupClient]
 
-      (documentServiceClient.getTypes _).when("client1", "tenant1").returns(Future.successful(List("type1", "type2")))
-      (documentServiceClient.getTypes _).when("client1", "tenant2").returns(Future.successful(List("type1")))
+      (documentBackupClient.getTypes _).when("client1", "tenant1").returns(Future.successful(List("type1", "type2")))
+      (documentBackupClient.getTypes _).when("client1", "tenant2").returns(Future.successful(List("type1")))
 
       val (source, sink) = TestSource.probe[ClientTenant]
-        .via(addTypes(documentServiceClient))
+        .via(addTypes(documentBackupClient))
         .toMat(TestSink.probe[ClientTenant])(Keep.both)
         .run()
 
@@ -61,10 +61,10 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
     "not get types when already provided" in {
 
-      val documentServiceClient = stub[DocumentServiceClient]
+      val documentBackupClient = stub[DocumentBackupClient]
 
       val (source, sink) = TestSource.probe[ClientTenant]
-        .via(addTypes(documentServiceClient))
+        .via(addTypes(documentBackupClient))
         .toMat(TestSink.probe[ClientTenant])(Keep.both)
         .run()
 
@@ -80,7 +80,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       )
       sink.expectComplete()
 
-      (documentServiceClient.getTypes _).verify(*, *).never()
+      (documentBackupClient.getTypes _).verify(*, *).never()
     }
 
     "flatten types" in {
@@ -105,18 +105,18 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
     "add documents" in {
 
-      val documentServiceClient = stub[DocumentServiceClient]
+      val documentBackupClient = stub[DocumentBackupClient]
 
       val stream1 = Source(List("a", "b", "c")).map(ByteString(_))
       val stream2 = Source(List("a", "b", "c")).map(ByteString(_))
 
-      (documentServiceClient.getDocuments _).when("client1", "tenant1", "type1")
+      (documentBackupClient.getDocuments _).when("client1", "tenant1", "type1")
         .returns(Future.successful(stream1))
-      (documentServiceClient.getDocuments _).when("client1", "tenant1", "type2")
+      (documentBackupClient.getDocuments _).when("client1", "tenant1", "type2")
         .returns(Future.successful(stream2))
 
       val (source, sink) = TestSource.probe[BackupType]
-        .via(addDocuments(documentServiceClient))
+        .via(addDocuments(documentBackupClient))
         .toMat(TestSink.probe[BackupTypeData])(Keep.both)
         .run()
 

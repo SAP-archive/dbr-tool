@@ -13,13 +13,16 @@ package com.hybris.core.dbr.restore
 
 import akka.Done
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Sink, Source}
+import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.RestoreTypeConfig
-import com.hybris.core.dbr.document.DocumentServiceClient
+import com.hybris.core.dbr.document.DocumentBackupClient
 import org.scalatest.time.{Millis, Seconds, Span}
 
-import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 class RestoreServiceTest extends BaseCoreTest {
 
@@ -43,17 +46,30 @@ class RestoreServiceTest extends BaseCoreTest {
       restoreDir / "file1.json" overwrite """[{"type1":1},{"type1":2}]"""
       restoreDir / "file2.json" overwrite """[{"type2":1}]"""
 
-      val documentServiceClient = mock[DocumentServiceClient]
+      val documentServiceClient = mock[DocumentBackupClient]
 
-      (documentServiceClient.insertRawDocument _)
-        .expects("client", "tenant", "type1", """{"type1":1}""")
-        .returns(Future.successful("id1"))
-      (documentServiceClient.insertRawDocument _)
-        .expects("client", "tenant", "type1", """{"type1":2}""")
-        .returns(Future.successful("id2"))
-      (documentServiceClient.insertRawDocument _)
-        .expects("client", "tenant", "type2", """{"type2":1}""")
-        .returns(Future.successful("id3"))
+      //@formatter:off
+      (documentServiceClient.insertRawDocuments _)
+        .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
+            val result = Await.result(documents.runWith(Sink.head), 1 second)
+
+            client == "client" &&
+            tenant == "tenant" &&
+            `type` == "type1" &&
+            result == ByteString("""[{"type1":1},{"type1":2}]""")
+          })
+        .returns(Future.successful(1))
+      (documentServiceClient.insertRawDocuments _)
+        .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
+            val result = Await.result(documents.runWith(Sink.head), 1 second)
+
+            client == "client" &&
+            tenant == "tenant" &&
+            `type` == "type2" &&
+            result == ByteString("""[{"type2":1}]""")
+          })
+        .returns(Future.successful(1))
+      //@formatter:on
 
       val restoreService = new RestoreService(documentServiceClient, restoreDir.pathAsString)
 

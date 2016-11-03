@@ -11,18 +11,19 @@
  */
 package com.hybris.core.dbr.restore
 
+import java.nio.file.{Files, Paths}
+
 import akka.NotUsed
 import akka.event.slf4j.SLF4JLogging
-import akka.stream.scaladsl.Flow
-import cats.data.Xor
+import akka.stream.IOResult
+import akka.stream.scaladsl.{FileIO, Flow, Source}
+import akka.util.ByteString
 import com.hybris.core.dbr.config.RestoreTypeConfig
-import com.hybris.core.dbr.document.DocumentServiceClient
+import com.hybris.core.dbr.document.DocumentBackupClient
 import com.hybris.core.dbr.exceptions.RestoreException
-import com.hybris.core.dbr.file.FileOps._
 import com.hybris.core.dbr.model.RestoreTypeData
-import io.circe.Json
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 trait RestoreStream extends SLF4JLogging {
 
@@ -30,26 +31,24 @@ trait RestoreStream extends SLF4JLogging {
 
   def addDocuments(restoreDir: String): Flow[RestoreTypeConfig, RestoreTypeData, NotUsed] = {
     Flow[RestoreTypeConfig]
-      .mapConcat { rtc =>
-        readDocuments(s"$restoreDir/${rtc.file}") match {
-          case Xor.Right(documents) =>
-            log.info(s"Documents for tenant '${rtc.tenant}' and type '${rtc.`type`}' were read from file")
-            documents.map(doc => RestoreTypeData(rtc.client, rtc.tenant, rtc.`type`, doc))
-
-          case Xor.Left(error) => throw RestoreException(error.getMessage)
-        }
-      }
+      .map(config ⇒ RestoreTypeData(config.client, config.tenant, config.`type`, getFileSource(s"$restoreDir/${config.file}")))
   }
 
-  private def readDocuments(path: String): Xor[FileError, List[String]] = {
-    readFileAs[List[Json]](path).map(jsons => jsons.map(_.noSpaces))
+  private def getFileSource(fileName: String): Source[ByteString, Future[IOResult]] = {
+    val file = Paths.get(fileName)
+    if (Files.exists(file)) {
+      FileIO.fromPath(file)
+    }
+    else {
+      throw RestoreException(s"File '$file' not found.")
+    }
   }
 
-  def insertDocuments(documentServiceClient: DocumentServiceClient)
-                     (implicit executionContext: ExecutionContext): Flow[RestoreTypeData, String, NotUsed] = {
+  def insertDocuments(documentBackupClient: DocumentBackupClient)
+                     (implicit executionContext: ExecutionContext): Flow[RestoreTypeData, Int, NotUsed] = {
     Flow[RestoreTypeData]
       .mapAsync(Parallelism) { rtd =>
-        documentServiceClient.insertRawDocument(rtd.client, rtd.tenant, rtd.`type`, rtd.document)
+        documentBackupClient.insertRawDocuments(rtd.client, rtd.tenant, rtd.`type`, rtd.documents)
           .recover {
             case t: Throwable => throw RestoreException(t.getMessage)
           }

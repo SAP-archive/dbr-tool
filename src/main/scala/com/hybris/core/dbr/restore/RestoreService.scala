@@ -15,11 +15,11 @@ import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Keep, RunnableGraph, Sink, Source}
 import com.hybris.core.dbr.config.RestoreTypeConfig
-import com.hybris.core.dbr.document.DocumentServiceClient
+import com.hybris.core.dbr.document.DocumentBackupClient
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class RestoreService(documentServiceClient: DocumentServiceClient,
+class RestoreService(documentBackupClient: DocumentBackupClient,
                      restoreDir: String)
                     (implicit executionContext: ExecutionContext, materializer: Materializer)
   extends RestoreStream {
@@ -29,7 +29,7 @@ class RestoreService(documentServiceClient: DocumentServiceClient,
   private def createGraph(types: List[RestoreTypeConfig]): RunnableGraph[Future[Done]] = {
     Source(types)
       .via(addDocuments(restoreDir))
-      .via(insertDocuments(documentServiceClient))
+      .via(insertDocuments(documentBackupClient))
       .toMat(Sink.ignore)(Keep.right)
   }
 

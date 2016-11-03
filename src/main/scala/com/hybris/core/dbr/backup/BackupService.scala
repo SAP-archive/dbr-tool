@@ -14,12 +14,12 @@ package com.hybris.core.dbr.backup
 import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Keep, RunnableGraph, Sink, Source}
-import com.hybris.core.dbr.document.DocumentServiceClient
+import com.hybris.core.dbr.document.DocumentBackupClient
 import com.hybris.core.dbr.model.ClientTenant
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class BackupService(documentServiceClient: DocumentServiceClient,
+class BackupService(documentBackupClient: DocumentBackupClient,
                     destinationDir: String,
                     summaryFileName: String)
                    (implicit executionContext: ExecutionContext, materializer: Materializer) extends BackupStream {
@@ -28,9 +28,9 @@ class BackupService(documentServiceClient: DocumentServiceClient,
 
   private def createGraph(cts: List[ClientTenant]): RunnableGraph[Future[Done]] = {
     Source(cts)
-      .via(addTypes(documentServiceClient))
+      .via(addTypes(documentBackupClient))
       .via(flattenTypes)
-      .via(addDocuments(documentServiceClient))
+      .via(addDocuments(documentBackupClient))
       .via(writeToFiles(destinationDir))
       .via(writeSummary(destinationDir, summaryFileName))
       .toMat(Sink.head)(Keep.right)
