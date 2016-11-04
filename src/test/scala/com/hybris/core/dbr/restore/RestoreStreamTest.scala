@@ -124,10 +124,10 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       val fileSource1 = FileIO.fromPath(Paths.get("a"))
       val fileSource2 = FileIO.fromPath(Paths.get("b"))
 
-      (documentBackupClient.insertRawDocuments _)
+      (documentBackupClient.insertDocuments _)
         .when("client", "tenant1", "type1", fileSource1)
         .returns(Future.successful(1))
-      (documentBackupClient.insertRawDocuments _)
+      (documentBackupClient.insertDocuments _)
         .when("client", "tenant1", "type1", fileSource2)
         .returns(Future.successful(1))
 
@@ -151,7 +151,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       val documentBackupClient = stub[DocumentBackupClient]
       val fileSource1 = FileIO.fromPath(Paths.get("a"))
 
-      (documentBackupClient.insertRawDocuments _)
+      (documentBackupClient.insertDocuments _)
         .when("client", "tenant1", "type1", fileSource1)
         .returns(Future.failed(new RuntimeException("some error")))
 

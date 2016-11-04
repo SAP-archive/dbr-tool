@@ -58,7 +58,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
       }
   }
 
-  override def insertRawDocuments(client: String, tenant: String, `type`: String, documents: Source[ByteString, _]): Future[Int] = {
+  override def insertDocuments(client: String, tenant: String, `type`: String, documents: Source[ByteString, _]): Future[Int] = {
 
     val request = HttpRequest(method = HttpMethods.POST,
       uri = s"$documentBackupUrl/$tenant/$client/data/${`type`}",

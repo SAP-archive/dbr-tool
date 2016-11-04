@@ -49,7 +49,7 @@ class RestoreServiceTest extends BaseCoreTest {
       val documentServiceClient = mock[DocumentBackupClient]
 
       //@formatter:off
-      (documentServiceClient.insertRawDocuments _)
+      (documentServiceClient.insertDocuments _)
         .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
             val result = Await.result(documents.runWith(Sink.head), 1 second)
 
@@ -59,7 +59,7 @@ class RestoreServiceTest extends BaseCoreTest {
             result == ByteString("""[{"type1":1},{"type1":2}]""")
           })
         .returns(Future.successful(1))
-      (documentServiceClient.insertRawDocuments _)
+      (documentServiceClient.insertDocuments _)
         .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
             val result = Await.result(documents.runWith(Sink.head), 1 second)
 

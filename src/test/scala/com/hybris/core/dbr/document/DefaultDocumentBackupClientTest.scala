@@ -56,14 +56,14 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
 
     "insert raw document" in {
 
-      val result = client.insertRawDocuments("client.token", "insertTenant", "items", Source.single(ByteString("""{"a":1}"""))).futureValue
+      val result = client.insertDocuments("client.token", "insertTenant", "items", Source.single(ByteString("""{"a":1}"""))).futureValue
 
       result mustBe 1
     }
 
     "handle bad response when inserting raw document" in {
 
-      val result = client.insertRawDocuments("client.bad", "insertTenant", "items", Source.single(ByteString("""{"a":1}"""))).failed.futureValue
+      val result = client.insertDocuments("client.bad", "insertTenant", "items", Source.single(ByteString("""{"a":1}"""))).failed.futureValue
 
       result mustBe a[DocumentBackupClientException]
     }

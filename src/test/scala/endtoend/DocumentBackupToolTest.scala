@@ -32,14 +32,19 @@ class DocumentBackupToolTest extends BaseCoreTest {
 
     /**
       * This is an end-to-end test. In order to run it, export CLIENT_ID and CLIENT_SECRET at first.
+      * Please keep this test ignored.
       */
-    "backup data from US and restore in EU" in {
+    "backup data from US and restore in EU" ignore {
+
+      import DocumentServiceClient._
+      import OAuthClient._
+
       // Set up
-      val usToken = OAuthClient.getToken("https://api.yaas.io/hybris/oauth2/v1/token",
+      val usToken = getToken("https://api.yaas.io/hybris/oauth2/v1/token",
         clientId,
         clientSecret,
         List("hybris.document_view hybris.document_manage")).futureValue
-      val euToken = OAuthClient.getToken("https://api.eu.yaas.io/hybris/oauth2/v1/token",
+      val euToken = getToken("https://api.eu.yaas.io/hybris/oauth2/v1/token",
         clientId,
         clientSecret,
         List("hybris.document_view hybris.document_manage")).futureValue
@@ -57,8 +62,7 @@ class DocumentBackupToolTest extends BaseCoreTest {
         |	"b": true
         |}""".stripMargin
 
-      val usDocumentId = DocumentServiceClient.insertDocument(
-        "https://api.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`, document).futureValue
+      val usDocumentId = insertDocument("https://api.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`, document).futureValue
 
       // Prepare config file
       val testDir = File.newTemporaryDirectory()
@@ -86,14 +90,13 @@ class DocumentBackupToolTest extends BaseCoreTest {
       Thread.sleep(5000)
 
       // Verify the document in EU
-      val documentFromEu = DocumentServiceClient
-        .getDocument("https://api.eu.yaas.io/hybris/document/v1", euToken, "framefrog", "framefrog.mycomicsshop", `type`, usDocumentId).futureValue
+      val documentFromEu = getDocument("https://api.eu.yaas.io/hybris/document/v1", euToken, "framefrog", "framefrog.mycomicsshop", `type`, usDocumentId).futureValue
 
       documentFromEu must include(usDocumentId)
 
       // Cleanup
-      DocumentServiceClient.deleteType("https://api.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`).futureValue
-      DocumentServiceClient.deleteType("https://api.eu.yaas.io/hybris/document/v1", euToken, "framefrog", "framefrog.mycomicsshop", `type`).futureValue
+      deleteType("https://api.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`).futureValue
+      deleteType("https://api.eu.yaas.io/hybris/document/v1", euToken, "framefrog", "framefrog.mycomicsshop", `type`).futureValue
     }
   }
 }

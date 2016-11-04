@@ -48,7 +48,7 @@ trait RestoreStream extends SLF4JLogging {
                      (implicit executionContext: ExecutionContext): Flow[RestoreTypeData, Int, NotUsed] = {
     Flow[RestoreTypeData]
       .mapAsync(Parallelism) { rtd =>
-        documentBackupClient.insertRawDocuments(rtd.client, rtd.tenant, rtd.`type`, rtd.documents)
+        documentBackupClient.insertDocuments(rtd.client, rtd.tenant, rtd.`type`, rtd.documents)
           .recover {
             case t: Throwable => throw RestoreException(t.getMessage)
           }

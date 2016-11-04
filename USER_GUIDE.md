@@ -2,7 +2,7 @@
 
 Document service backup and restore tool, or simply `dbr`, allows to backup data from Document service 
 and restore data to Document service. The backup operation reads your documents from the Document service
-using the Document Backup and writes them as extended JSONs to files in a designated directory. 
+using the Document Backup service and writes them as extended JSONs to files in a designated directory. 
 This directory can be later used for restoration.
   
 Both operations have an option to choose an environment. `dbr` supports all available environments 

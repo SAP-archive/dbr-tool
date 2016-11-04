@@ -18,7 +18,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, StatusCod
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import com.hybris.core.dbr.BaseCoreTest
-import com.hybris.core.dbr.exceptions.DocumentBackupClientException
+import com.hybris.core.dbr.exceptions.DocumentServiceClientException
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.Await
@@ -56,7 +56,7 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
 
       val result = client.getTypes("client.bad", "typesTenant").failed.futureValue
 
-      result mustBe a[DocumentBackupClientException]
+      result mustBe a[DocumentServiceClientException]
     }
   }
 
