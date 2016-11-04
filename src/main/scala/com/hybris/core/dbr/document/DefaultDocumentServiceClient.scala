@@ -17,7 +17,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
-import com.hybris.core.dbr.exceptions.DocumentBackupClientException
+import com.hybris.core.dbr.exceptions.DocumentServiceClientException
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder
@@ -51,7 +51,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
         case response =>
           response.discardEntityBytes()
-          Future.failed(DocumentBackupClientException(s"Failed to get types for client '$client' and tenant '$tenant'," +
+          Future.failed(DocumentServiceClientException(s"Failed to get types for client '$client' and tenant '$tenant'," +
             s" status: ${response.status.intValue()}"))
       }
   }
