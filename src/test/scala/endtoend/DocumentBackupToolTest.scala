@@ -25,8 +25,6 @@ class DocumentBackupToolTest extends BaseCoreTest {
   implicit val materializer = ActorMaterializer()
 
   val `type` = "dbrTest"
-  val clientId = sys.env("CLIENT_ID")
-  val clientSecret = sys.env("CLIENT_SECRET")
 
   "Document Backup Restore tool" should {
 
@@ -40,6 +38,8 @@ class DocumentBackupToolTest extends BaseCoreTest {
       import OAuthClient._
 
       // Set up
+      val clientId = sys.env("CLIENT_ID")
+      val clientSecret = sys.env("CLIENT_SECRET")
       val usToken = getToken("https://api.yaas.io/hybris/oauth2/v1/token",
         clientId,
         clientSecret,
