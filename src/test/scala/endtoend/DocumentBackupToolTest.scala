@@ -13,6 +13,7 @@ package endtoend
 
 import akka.stream.ActorMaterializer
 import better.files.File
+import com.hybris.core.dbr.oauth.OAuthClient
 import com.hybris.core.dbr.{BaseCoreTest, Main}
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -35,19 +36,21 @@ class DocumentBackupToolTest extends BaseCoreTest {
     "backup data from US and restore in EU" ignore {
 
       import DocumentServiceClient._
-      import OAuthClient._
 
       // Set up
       val clientId = sys.env("CLIENT_ID")
       val clientSecret = sys.env("CLIENT_SECRET")
-      val usToken = getToken("https://api.yaas.io/hybris/oauth2/v1/token",
+
+      val scopes = List("hybris.document_view hybris.document_manage")
+      val usToken = new OAuthClient("https://api.yaas.io/hybris/oauth2/v1/token",
         clientId,
         clientSecret,
-        List("hybris.document_view hybris.document_manage")).futureValue
-      val euToken = getToken("https://api.eu.yaas.io/hybris/oauth2/v1/token",
+        scopes).getToken.futureValue
+
+      val euToken = new OAuthClient("https://api.eu.yaas.io/hybris/oauth2/v1/token",
         clientId,
         clientSecret,
-        List("hybris.document_view hybris.document_manage")).futureValue
+        scopes).getToken.futureValue
 
       // Insert a document
       val document =
