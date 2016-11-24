@@ -27,10 +27,10 @@ import scala.concurrent.{ExecutionContext, Future}
 trait OAuth {
 
   /**
-    * Accesses the OAuth service and gets valid token.
-    *
-    * @return token.
-    */
+   * Accesses the OAuth service and gets valid token.
+   *
+   * @return token.
+   */
   def getToken: Future[String]
 
 }
@@ -52,17 +52,28 @@ class OAuthClient(oauthUri: String, clientId: String, clientSecret: String, scop
     ).toEntity)
 
   def getToken: Future[String] =
-    Http()
-      .singleRequest(getTokenRequest)
-      .flatMap {
-        case response if response.status.isSuccess() ⇒
-          Unmarshal(response).to[TokenResponse].map(r ⇒ r.access_token)
+    validateClientCredentials().flatMap(_ ⇒
+      Http()
+        .singleRequest(getTokenRequest)
+        .flatMap {
+          case response if response.status.isSuccess() ⇒
+            Unmarshal(response).to[TokenResponse].map(r ⇒ r.access_token)
 
-        case response ⇒
-          Future.failed(OAuthClientException(s"Error response from OAuth [${response.status}] $oauthUri"))
-      }
-      .recoverWith {
-        case _: StreamTcpException ⇒
-          Future.failed(OAuthClientException(s"TCP error during connecting to OAuth."))
-      }
+          case response ⇒
+            Future.failed(OAuthClientException(s"Error response from OAuth [${response.status}] $oauthUri"))
+        }
+        .recoverWith {
+          case _: StreamTcpException ⇒
+            Future.failed(OAuthClientException(s"TCP error during connecting to OAuth."))
+        })
+
+  private def validateClientCredentials(): Future[Boolean] = {
+    if (clientId.trim.isEmpty) {
+      Future.failed(OAuthClientException(s"Empty CLIENT_ID environment variable."))
+    } else if (clientSecret.trim.isEmpty) {
+      Future.failed(OAuthClientException(s"Empty CLIENT_SECRET environment variable."))
+    } else {
+      Future.successful(true)
+    }
+  }
 }

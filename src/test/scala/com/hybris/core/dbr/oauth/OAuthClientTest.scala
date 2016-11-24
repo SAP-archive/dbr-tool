@@ -72,6 +72,27 @@ class OAuthClientTest extends BaseCoreTest {
 
   "OAuthClient" when {
     "tries to get a token" should {
+
+      "check if client id is empty" in {
+
+        val oAuthActor = new OAuthClient("http://any", "", "clientSecret", List())
+
+        whenReady(oAuthActor.getToken.failed) { result ⇒
+          result mustBe a[OAuthClientException]
+          result.asInstanceOf[OAuthClientException].message must include("Empty CLIENT_ID")
+        }
+      }
+
+      "check if client secret is empty" in {
+
+        val oAuthActor = new OAuthClient("http://any", "clientId", "", List())
+
+        whenReady(oAuthActor.getToken.failed) { result ⇒
+          result mustBe a[OAuthClientException]
+          result.asInstanceOf[OAuthClientException].message must include("Empty CLIENT_SECRET")
+        }
+      }
+
       "succeed with correct response" in {
 
         val oAuthActor = new OAuthClient("http://localhost:8999/hybris/oauth2/v1/token", "clientId", "clientSecret", List())
