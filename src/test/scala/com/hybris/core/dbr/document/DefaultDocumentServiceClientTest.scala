@@ -92,7 +92,7 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
             headerValueByName("hybris-client") { client =>
               headerValueByName("hybris-tenant") { tenant =>
                 (client, tenant) match {
-                  case ("client.notoken", "typesTenant") =>
+                  case ("client.notoken", "client") =>
                     complete(HttpEntity(ContentTypes.`application/json`, """{"types" : ["type1", "type2"]}"""))
                   case _ ⇒
                     complete(StatusCodes.BadRequest)
