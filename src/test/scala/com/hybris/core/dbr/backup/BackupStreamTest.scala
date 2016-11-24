@@ -20,9 +20,9 @@ import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient}
 import com.hybris.core.dbr.model.{BackupType, BackupTypeData, BackupTypeResult, ClientTenant}
+import io.circe.Decoder
 import io.circe.generic.semiauto._
 import io.circe.parser._
-import io.circe.{Decoder, Json}
 
 import scala.concurrent.Future
 
@@ -176,7 +176,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       implicit val resultDecoder: Decoder[BackupTypeResult] = deriveDecoder
 
       val summary = File(s"$path/summary.json").contentAsString
-      val result = parse(summary).getOrElse(Json.Null).as[List[BackupTypeResult]].getOrElse(List())
+      val result = decode[List[BackupTypeResult]](summary).right.value
 
       result must contain theSameElementsAs List(
         BackupTypeResult("client1", "tenant1", "type1", "file1"),

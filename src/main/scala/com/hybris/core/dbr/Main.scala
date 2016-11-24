@@ -13,7 +13,7 @@ package com.hybris.core.dbr
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import cats.data.Xor
+import cats.implicits._
 import com.hybris.core.dbr.backup.BackupService
 import com.hybris.core.dbr.config._
 import com.hybris.core.dbr.document.{DefaultDocumentBackupClient, DefaultDocumentServiceClient}
@@ -43,15 +43,15 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
   private def runBackup(cliConfig: CliConfig) = {
     prepareBackup(cliConfig) match {
-      case Xor.Right(backupConfig) =>
+      case Right(backupConfig) =>
         doBackup(cliConfig, backupConfig)
 
-      case Xor.Left(error) =>
+      case Left(error) =>
         logger.error(error.message)
     }
   }
 
-  private def prepareBackup(cliConfig: CliConfig): Xor[InternalAppError, BackupConfig] = {
+  private def prepareBackup(cliConfig: CliConfig): Either[InternalAppError, BackupConfig] = {
     readBackupConfig(cliConfig.configFile)
       .flatMap { backupConfig =>
         prepareEmptyDir(cliConfig.backupDestinationDir)
@@ -97,15 +97,15 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
   private def runRestore(cliConfig: CliConfig) = {
     prepareRestore(cliConfig) match {
-      case Xor.Right(restoreConfig) =>
+      case Right(restoreConfig) =>
         doRestore(cliConfig, restoreConfig)
 
-      case Xor.Left(error) =>
+      case Left(error) =>
         logger.error(error.message)
     }
   }
 
-  private def prepareRestore(cliConfig: CliConfig): Xor[InternalAppError, RestoreConfig] = {
+  private def prepareRestore(cliConfig: CliConfig): Either[InternalAppError, RestoreConfig] = {
     readRestoreConfig(s"${cliConfig.restoreSourceDir}/$summaryFileName")
   }
 

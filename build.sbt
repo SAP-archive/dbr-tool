@@ -18,11 +18,11 @@ scalaVersion := "2.11.8"
 
 libraryDependencies ++= {
   val akkaVersion = "2.4.14"
-  val akkaHttpVersion = "2.4.11"
-  val circeVersion = "0.5.4"
+  val akkaHttpVersion = "10.0.0"
+  val circeVersion = "0.6.1"
 
   Seq(
-    "com.typesafe.akka" %% "akka-http-experimental" % akkaHttpVersion,
+    "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion,
     "com.typesafe.akka" %% "akka-stream" % akkaVersion,
     "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
 
@@ -33,12 +33,12 @@ libraryDependencies ++= {
     "com.github.scopt" %% "scopt" % "3.5.0",
 
     // circe
-    "de.heikoseeberger" %% "akka-http-circe" % "1.10.1",
+    "de.heikoseeberger" %% "akka-http-circe" % "1.11.0",
     "io.circe" %% "circe-core" % circeVersion,
     "io.circe" %% "circe-generic" % circeVersion,
     "io.circe" %% "circe-parser" % circeVersion,
 
-    "org.typelevel" %% "cats" % "0.7.2",
+    "org.typelevel" %% "cats" % "0.8.1",
 
     // configuration
     "com.typesafe" % "config" % "1.3.1",

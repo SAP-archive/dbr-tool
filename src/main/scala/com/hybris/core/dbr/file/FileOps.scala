@@ -14,7 +14,6 @@ package com.hybris.core.dbr.file
 import java.nio.file.{AccessDeniedException, NoSuchFileException}
 
 import better.files.File
-import cats.data.Xor
 import cats.implicits._
 import io.circe.Decoder
 import io.circe.parser._
@@ -39,57 +38,56 @@ object FileOps {
    * @param path path to directory
    * @return
    */
-  def prepareEmptyDir(path: String): Xor[FileError, Ready.type] = {
+  def prepareEmptyDir(path: String): Either[FileError, Ready.type] = {
     val dstDir = File(path)
 
     try {
       if (dstDir.exists && dstDir.isDirectory) {
         if (!dstDir.isEmpty) dstDir.clear()
-        Ready.right
+        Right(Ready)
       } else if (dstDir.exists && dstDir.isRegularFile) {
-        GenericFileError("Destination directory is a file.").left
+        Left(GenericFileError("Destination directory is a file."))
       } else if (dstDir.notExists) {
         createDirectory(dstDir)
       } else {
-        GenericFileError("Failed to prepare destination directory.").left
+        Left(GenericFileError("Failed to prepare destination directory."))
       }
     } catch {
       case e: Exception =>
-        GenericFileError(s"Failed to prepare destination directory, error: ${e.getMessage}").left
+        Left(GenericFileError(s"Failed to prepare destination directory, error: ${e.getMessage}"))
     }
   }
 
-  private def createDirectory(dir: File): Xor[FileError, Ready.type] = {
+  private def createDirectory(dir: File): Either[FileError, Ready.type] = {
     try {
       dir.createDirectory()
-      Ready.right
+      Right(Ready)
     } catch {
       case e: AccessDeniedException =>
-        GenericFileError("Failed to prepare destination directory, access denied.").left
+        Left(GenericFileError("Failed to prepare destination directory, access denied."))
       case e: NoSuchFileException =>
-        GenericFileError("Failed to prepare destination directory, path doesn't exist.").left
+        Left(GenericFileError("Failed to prepare destination directory, path doesn't exist."))
       case e: Throwable =>
-        GenericFileError(s"Failed to prepare destination directory, error: ${e.getMessage}.").left
+        Left(GenericFileError(s"Failed to prepare destination directory, error: ${e.getMessage}."))
     }
   }
 
   /**
    * Reads content from file and decodes it to given type.
    *
-   * @param path path to file
+   * @param path    path to file
    * @param decoder decoder to decode content
    * @tparam T expected type of result
    * @return
    */
-  def readFileAs[T](path: String)(implicit decoder: Decoder[T]): Xor[FileError, T] = {
+  def readFileAs[T](path: String)(implicit decoder: Decoder[T]): Either[FileError, T] = {
     val file = File(path)
 
     if (file.exists) {
-      parse(file.contentAsString)
-        .flatMap(json => json.as[T])
+      decode[T](file.contentAsString)
         .leftMap(error => FileParsingError(s"Failed to read file '$path', unexpected content, error: " + error.getMessage))
     } else {
-      FileNotFoundError(path).left
+      Left(FileNotFoundError(path))
     }
   }
 }

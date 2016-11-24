@@ -14,7 +14,6 @@ package com.hybris.core.dbr.file
 import java.time.Instant
 
 import better.files.File
-import cats.implicits._
 import com.hybris.core.dbr.BaseTest
 import com.hybris.core.dbr.file.FileOps._
 import io.circe.Decoder
@@ -38,7 +37,7 @@ class FileOpsTest extends BaseTest {
         val result = prepareEmptyDir(path)
 
         // then
-        result mustBe Ready.right
+        result mustBe Right(Ready)
 
         val resultDir = File(path)
         resultDir.exists mustBe true
@@ -53,7 +52,7 @@ class FileOpsTest extends BaseTest {
         val result = prepareEmptyDir(tmpDir.pathAsString)
 
         // then
-        result mustBe Ready.right
+        result mustBe Right(Ready)
 
         tmpDir.exists mustBe true
         tmpDir.isEmpty mustBe true
@@ -68,7 +67,7 @@ class FileOpsTest extends BaseTest {
         val result = prepareEmptyDir(tmpDir.pathAsString)
 
         // then
-        result mustBe Ready.right
+        result mustBe Right(Ready)
 
         tmpDir.exists mustBe true
         tmpDir.isEmpty mustBe true
@@ -79,7 +78,7 @@ class FileOpsTest extends BaseTest {
         val path = s"/${File.temp.pathAsString}/$randomName/$randomName"
 
         // when
-        val result = prepareEmptyDir(path).toEither.left.value
+        val result = prepareEmptyDir(path).left.value
 
         // then
         result mustBe a[GenericFileError]
@@ -90,7 +89,7 @@ class FileOpsTest extends BaseTest {
         File(path).touch(Instant.now())
 
         // when
-        val result = prepareEmptyDir(path).toEither.left.value
+        val result = prepareEmptyDir(path).left.value
 
         // then
         result mustBe a[GenericFileError]
@@ -112,7 +111,7 @@ class FileOpsTest extends BaseTest {
             | }
           """.stripMargin)
 
-        val testPerson = readFileAs[TestPerson](file.pathAsString).toEither.right.value
+        val testPerson = readFileAs[TestPerson](file.pathAsString).right.value
 
         testPerson mustBe TestPerson("John", 30)
       }
@@ -120,7 +119,7 @@ class FileOpsTest extends BaseTest {
       "return error if file doesn't exist" in {
         val file = File.temp / randomName
 
-        val result = readFileAs[TestPerson](file.pathAsString).toEither.left.value
+        val result = readFileAs[TestPerson](file.pathAsString).left.value
 
         result mustBe FileNotFoundError(file.pathAsString)
       }
@@ -129,7 +128,7 @@ class FileOpsTest extends BaseTest {
         val file = File.newTemporaryFile()
         file.overwrite("not a json")
 
-        val result = readFileAs(file.pathAsString).toEither.left.value
+        val result = readFileAs(file.pathAsString).left.value
 
         result mustBe a[FileParsingError]
       }
@@ -144,7 +143,7 @@ class FileOpsTest extends BaseTest {
             | }
           """.stripMargin)
 
-        val result = readFileAs(file.pathAsString).toEither.left.value
+        val result = readFileAs(file.pathAsString).left.value
 
         result mustBe a[FileParsingError]
       }

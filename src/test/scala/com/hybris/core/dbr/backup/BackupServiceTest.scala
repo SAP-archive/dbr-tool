@@ -57,7 +57,7 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       // then
       result mustBe Done
 
-      val restoreConfig = readRestoreConfig(dstDir.pathAsString + "/backup.json").toEither.right.value
+      val restoreConfig = readRestoreConfig(dstDir.pathAsString + "/backup.json").right.value
       restoreConfig.types must have size 2
 
       val rtc1 = restoreConfig.types

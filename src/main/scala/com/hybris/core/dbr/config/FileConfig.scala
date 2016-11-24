@@ -11,7 +11,7 @@
 */
 package com.hybris.core.dbr.config
 
-import cats.data.Xor
+import cats.implicits._
 import com.hybris.core.dbr.config.FileConfig._
 import com.hybris.core.dbr.file.FileOps._
 import com.hybris.core.dbr.model.InternalAppError
@@ -29,7 +29,7 @@ trait FileConfig {
    * @param path command line configuration
    * @return backup configuration
    */
-  def readBackupConfig(path: String): Xor[InternalAppError, BackupConfig] = {
+  def readBackupConfig(path: String): Either[InternalAppError, BackupConfig] = {
     readFileAs[BackupConfig](path)
       .leftMap(error => convertToInternalAppError(error, path))
 
@@ -41,7 +41,7 @@ trait FileConfig {
    * @param path command line configuration
    * @return restore configuration
    */
-  def readRestoreConfig(path: String): Xor[InternalAppError, RestoreConfig] = {
+  def readRestoreConfig(path: String): Either[InternalAppError, RestoreConfig] = {
     readFileAs[List[RestoreTypeConfig]](path)
       .map(types => RestoreConfig(types))
       .leftMap(error => convertToInternalAppError(error, path))
