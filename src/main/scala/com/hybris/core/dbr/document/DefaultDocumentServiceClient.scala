@@ -16,7 +16,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.Materializer
+import akka.stream.{Materializer, StreamTcpException}
 import com.hybris.core.dbr.exceptions.DocumentServiceClientException
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.Decoder
@@ -54,6 +54,9 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
           Future.failed(DocumentServiceClientException(s"Failed to get types for client '$client' and tenant '$tenant'," +
             s" status: ${response.status.intValue()}"))
       }
+      .recoverWith {
+        case _: StreamTcpException ⇒
+          Future.failed(DocumentServiceClientException(s"TCP error during getting a list of types from the Document service."))
+      }
   }
-
 }

@@ -11,7 +11,7 @@
 
 	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
-			<pattern>%msg%n</pattern>
+			<pattern>[%date{HH:mm:ss}] %black(%m) %n</pattern>
 		</encoder>
 	</appender>
 
@@ -22,4 +22,5 @@
 	<root level="ERROR">
 		<appender-ref ref="FILE" />
 	</root>
+
 </configuration>

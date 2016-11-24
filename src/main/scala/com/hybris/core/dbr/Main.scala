@@ -72,6 +72,8 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
     val result = getOAuthToken(cliConfig.env, oauthClient)
       .flatMap { token =>
+        logger.info("OAuth token successfully acquired.")
+
         val documentBackupClient = new DefaultDocumentBackupClient(documentBackupUrl(cliConfig.env), token)
         val documentServiceClient = new DefaultDocumentServiceClient(documentServiceUrl(cliConfig.env), token)
 

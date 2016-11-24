@@ -16,10 +16,10 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.Materializer
+import akka.stream.{Materializer, StreamTcpException}
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import com.hybris.core.dbr.exceptions.DocumentBackupClientException
+import com.hybris.core.dbr.exceptions.{DocumentBackupClientException, DocumentServiceClientException}
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder
@@ -56,6 +56,10 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
           Future.failed(DocumentBackupClientException(s"Failed to get documents for client '$client',tenant '$tenant'" +
             s" and type '${`type`}', status: ${response.status.intValue()}"))
       }
+      .recoverWith {
+        case _: StreamTcpException ⇒
+          Future.failed(DocumentServiceClientException(s"TCP error during getting documents from the Document service."))
+      }
   }
 
   override def insertDocuments(client: String, tenant: String, `type`: String, documents: Source[ByteString, _]): Future[Int] = {
@@ -75,6 +79,10 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
         case response ⇒
           response.discardEntityBytes()
           Future.failed(DocumentBackupClientException(s"Failed to inserting raw document. Response code: ${response.status}"))
+      }
+      .recoverWith {
+        case _: StreamTcpException ⇒
+          Future.failed(DocumentServiceClientException(s"TCP error during inserting documents to the Document service."))
       }
   }
 }

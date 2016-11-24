@@ -16,7 +16,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.model.FormData
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, StreamTcpException}
+import com.hybris.core.dbr.exceptions.OAuthClientException
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.Decoder
 import io.circe.generic.semiauto._
@@ -58,6 +59,10 @@ class OAuthClient(oauthUri: String, clientId: String, clientSecret: String, scop
           Unmarshal(response).to[TokenResponse].map(r ⇒ r.access_token)
 
         case response ⇒
-          Future.failed(new RuntimeException(s"Failed to get token: ${response.status} $oauthUri"))
+          Future.failed(OAuthClientException(s"Error response from OAuth [${response.status}] $oauthUri"))
+      }
+      .recoverWith {
+        case _: StreamTcpException ⇒
+          Future.failed(OAuthClientException(s"TCP error during connecting to OAuth."))
       }
 }
