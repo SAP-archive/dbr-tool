@@ -30,7 +30,7 @@ class DocumentBackupToolTest extends BaseCoreTest {
   "Document Backup Restore tool" should {
 
     /**
-      * This is an end-to-end test. In order to run it, export CLIENT_ID and CLIENT_SECRET at first.
+      * This is an end-to-end test. In order to run it, export CLIENT_ID and CLIENT_SECRET for framefrog.mycomicsshop at first.
       * Please keep this test ignored.
       */
     "backup data from US and restore in EU" ignore {

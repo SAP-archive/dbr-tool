@@ -67,6 +67,18 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
 
       result mustBe a[DocumentBackupClientException]
     }
+
+    "handle failed request" in {
+
+      val client = new DefaultDocumentBackupClient("http://localhost:54392", Some("token"))
+
+      val response = client.insertDocuments("client.bad", "insertTenant", "items", Source.single(ByteString("""{"a":1}""")))
+
+      whenReady(response.failed) { result ⇒
+        result mustBe a[DocumentBackupClientException]
+      }
+    }
+
   }
 
   def extractToken: PartialFunction[HttpHeader, String] = {
