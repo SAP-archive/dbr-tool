@@ -16,6 +16,7 @@ import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.{ContentTypes, _}
 import akka.stream.ActorMaterializer
 import com.hybris.core.dbr.BaseCoreTest
+import com.hybris.core.dbr.exceptions.OAuthClientException
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.Await
@@ -69,7 +70,7 @@ class OAuthClientTest extends BaseCoreTest {
     Await.result(binding.unbind(), 1 second)
   }
 
-  "OAuthActor" when {
+  "OAuthClient" when {
     "tries to get a token" should {
       "succeed with correct response" in {
 
@@ -92,12 +93,21 @@ class OAuthClientTest extends BaseCoreTest {
         }
       }
 
-      "failed with when request response is not 2xx" in {
+      "handle response with code other than 2xx" in {
 
         val oAuthActor = new OAuthClient("http://localhost:8999/notExistingEndpoint", "clientId", "clientSecret", List())
 
         whenReady(oAuthActor.getToken.failed) { result ⇒
-          result mustBe a[RuntimeException]
+          result mustBe a[OAuthClientException]
+        }
+      }
+
+      "handle failed request" in {
+
+        val oAuthActor = new OAuthClient("http://localhost:10382/notExistingEndpoint", "clientId", "clientSecret", List())
+
+        whenReady(oAuthActor.getToken.failed) { result ⇒
+          result mustBe a[OAuthClientException]
         }
       }
     }

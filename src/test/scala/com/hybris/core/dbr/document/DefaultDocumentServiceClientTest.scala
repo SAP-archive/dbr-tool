@@ -58,6 +58,16 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
 
       result mustBe a[DocumentServiceClientException]
     }
+
+    "handle failed request" in {
+
+      val client = new DefaultDocumentServiceClient("http://localhost:19382", None)
+
+      whenReady(client.getTypes("client.bad", "typesTenant").failed) { result ⇒
+        result mustBe a[DocumentServiceClientException]
+      }
+    }
+
   }
 
   def extractToken: PartialFunction[HttpHeader, String] = {
