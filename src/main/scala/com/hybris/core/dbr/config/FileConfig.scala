@@ -19,16 +19,16 @@ import io.circe._
 import io.circe.generic.semiauto._
 
 /**
- * Functions to read configuration from user provided JSONs.
- */
+  * Functions to read configuration from user provided JSONs.
+  */
 trait FileConfig {
 
   /**
-   * Reads configuration for backup operation.
-   *
-   * @param path command line configuration
-   * @return backup configuration
-   */
+    * Reads configuration for backup operation.
+    *
+    * @param path command line configuration
+    * @return backup configuration
+    */
   def readBackupConfig(path: String): Either[InternalAppError, BackupConfig] = {
     readFileAs[BackupConfig](path)
       .leftMap(error => convertToInternalAppError(error, path))
@@ -36,11 +36,11 @@ trait FileConfig {
   }
 
   /**
-   * Reads configuration for restorer operation
-   *
-   * @param path command line configuration
-   * @return restore configuration
-   */
+    * Reads configuration for restorer operation
+    *
+    * @param path command line configuration
+    * @return restore configuration
+    */
   def readRestoreConfig(path: String): Either[InternalAppError, RestoreConfig] = {
     readFileAs[List[RestoreTypeConfig]](path)
       .map(types => RestoreConfig(types))
@@ -64,6 +64,7 @@ trait FileConfig {
 
 object FileConfig {
   implicit val backupConfigDecoder: Decoder[BackupConfig] = deriveDecoder
+
   implicit val backupTenantConfigDecoder: Decoder[BackupTenantConfig] = deriveDecoder
 
   implicit val restoreTypeConfig: Decoder[RestoreTypeConfig] = deriveDecoder

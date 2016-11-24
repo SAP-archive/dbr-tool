@@ -20,7 +20,8 @@ trait YaasHeaders {
     authorizationHeader match {
       case Some(authHeader) ⇒ authHeader :: Nil
       case None ⇒
-        RawHeader("hybris-client", client) :: RawHeader("hybris-tenant", tenant) :: RawHeader("hybris-client-owner", getClientOwner(client)) :: Nil
+        val owner = getClientOwner(client)
+        RawHeader("hybris-client", client) :: RawHeader("hybris-tenant", owner) :: RawHeader("hybris-client-owner", owner) :: Nil
     }
   }
 

@@ -27,10 +27,10 @@ import scala.concurrent.{ExecutionContext, Future}
 trait OAuth {
 
   /**
-   * Accesses the OAuth service and gets valid token.
-   *
-   * @return token.
-   */
+    * Accesses the OAuth service and gets valid token.
+    *
+    * @return token.
+    */
   def getToken: Future[String]
 
 }
