@@ -57,6 +57,8 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
       val result = client.getTypes("client.bad", "typesTenant").failed.futureValue
 
       result mustBe a[DocumentServiceClientException]
+      result.asInstanceOf[DocumentServiceClientException].message must include("bad request message")
+      result.asInstanceOf[DocumentServiceClientException].message must include("400")
     }
 
     "handle failed request" in {
@@ -99,7 +101,7 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
             }
           } ~
           path("client.bad") {
-            complete(StatusCodes.BadRequest)
+            complete((StatusCodes.BadRequest, "bad request message"))
           }
       }
     }

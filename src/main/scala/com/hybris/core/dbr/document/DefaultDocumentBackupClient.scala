@@ -52,9 +52,10 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
           Future.successful(response.entity.withoutSizeLimit().dataBytes)
 
         case response =>
-          response.discardEntityBytes()
-          Future.failed(DocumentBackupClientException(s"Failed to get documents for client '$client',tenant '$tenant'" +
-            s" and type '${`type`}', status: ${response.status.intValue()}"))
+          response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒
+            Future.failed(DocumentBackupClientException(s"Failed to get documents for client '$client',tenant '$tenant'" +
+              s" and type '${`type`}'. \nStatus code: ${response.status.intValue()}. \nReason: '$msg'."))
+          )
       }
       .recoverWith {
         case _: StreamTcpException ⇒
@@ -78,7 +79,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
 
         case response ⇒
           response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒
-            Future.failed(DocumentBackupClientException(s"Failed to inserting raw documents. Reason: $msg"))
+            Future.failed(DocumentBackupClientException(s"Failed to inserting raw documents. \nStatus code: ${response.status.intValue()}. \nReason: '$msg'"))
           )
       }
       .recoverWith {

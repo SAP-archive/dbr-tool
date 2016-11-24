@@ -66,6 +66,8 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
       val result = client.insertDocuments("client.bad", "insertTenant", "items", Source.single(ByteString("""{"a":1}"""))).failed.futureValue
 
       result mustBe a[DocumentBackupClientException]
+      result.asInstanceOf[DocumentBackupClientException].message must include("bad request message")
+      result.asInstanceOf[DocumentBackupClientException].message must include("400")
     }
 
     "handle failed request" in {
@@ -116,7 +118,7 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
             }
           } ~
             path("client.bad" / "data" / "items") {
-              complete(StatusCodes.BadRequest)
+              complete((StatusCodes.BadRequest, "bad request message"))
             }
         }
       }

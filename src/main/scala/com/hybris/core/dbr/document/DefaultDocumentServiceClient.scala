@@ -50,9 +50,10 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
           Unmarshal(response).to[GetTypesResponse].map(_.types)
 
         case response =>
-          response.discardEntityBytes()
-          Future.failed(DocumentServiceClientException(s"Failed to get types for client '$client' and tenant '$tenant'," +
-            s" status: ${response.status.intValue()}"))
+          response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒
+            Future.failed(DocumentServiceClientException(s"Failed to get types for client '$client' and tenant '$tenant'," +
+              s". \nStatus code: ${response.status.intValue()}. \nReason: '$msg'."))
+          )
       }
       .recoverWith {
         case _: StreamTcpException ⇒
