@@ -62,6 +62,15 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
       val result = client.getDocuments("client.bad", "documentsTenant", "items").failed.futureValue
 
       result mustBe a[DocumentBackupClientException]
+      result.getMessage must include ("bad request message")
+    }
+
+    "handle bad response ecoded with gzip when getting documents" in {
+
+      val result = client.getDocuments("client.badGzip", "documentsTenant", "items").failed.futureValue
+
+      result mustBe a[DocumentBackupClientException]
+      result.getMessage must include ("bad gzip request message")
     }
 
     "handle unsupported encoding when getting documents" in {
@@ -115,12 +124,17 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
             }
           }
         } ~
-          path("client.bad" / "data" / "items") {
-            complete(StatusCodes.BadRequest)
-          } ~
           path("client.gzip" / "data" / "items") {
             encodeResponseWith(Gzip) {
               complete(HttpEntity(ContentTypes.`application/json`, """[{"gzip":1},{"gzip":2}]"""))
+            }
+          } ~
+          path("client.bad" / "data" / "items") {
+            complete((StatusCodes.BadRequest, "bad request message"))
+          } ~
+          path("client.badGzip" / "data" / "items") {
+            encodeResponseWith(Gzip) {
+              complete((StatusCodes.BadRequest, "bad gzip request message"))
             }
           } ~
           path("client.deflate" / "data" / "items") {
