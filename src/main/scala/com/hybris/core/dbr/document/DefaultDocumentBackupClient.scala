@@ -52,18 +52,10 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
       .singleRequest(request)
       .flatMap {
         case response if response.status.isSuccess() =>
-          val contentEncoding = getContentEncoding(response)
-          if (contentEncoding == gzip.value) {
-            Future.successful(response.entity.withoutSizeLimit().dataBytes.via(Compression.gunzip(MaxBytesPerChunkDefault)))
-          } else if (contentEncoding == HttpEncodings.identity.value) {
-            Future.successful(response.entity.withoutSizeLimit().dataBytes)
-          } else {
-            response.entity.discardBytes()
-            Future.failed(DocumentServiceClientException(s"Unsupported content encoding $contentEncoding"))
-          }
+          Future.successful(getData(response))
 
         case response =>
-          response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒
+          getData(response).runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒
             Future.failed(DocumentBackupClientException(s"Failed to get documents for client '$client',tenant '$tenant'" +
               s" and type '${`type`}'. \nStatus code: ${response.status.intValue()}. \nReason: '$msg'."))
           )
@@ -111,6 +103,14 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
         case err: Throwable ⇒
           Future.failed(DocumentBackupClientException(s"Inserting documents encountered error. Reason: ${err.getMessage}"))
       }
+  }
+
+  private def getData(response: HttpResponse): Source[ByteString, _] = {
+    if (getContentEncoding(response) == gzip.value) {
+      response.entity.withoutSizeLimit().dataBytes.via(Compression.gunzip(MaxBytesPerChunkDefault))
+    } else {
+      response.entity.withoutSizeLimit().dataBytes
+    }
   }
 
   private def getContentEncoding(response: HttpResponse) = {
