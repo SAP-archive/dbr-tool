@@ -13,6 +13,7 @@ package com.hybris.core.dbr.document
 
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
+import akka.http.scaladsl.coding.{Deflate, Gzip}
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, StatusCodes}
 import akka.http.scaladsl.server.Directives._
@@ -47,6 +48,15 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
       result mustBe """[{"doc":1},{"doc":2}]"""
     }
 
+    "get document encoded with gzip" in {
+
+      val stream = client.getDocuments("client.gzip", "documentsTenant", "items").futureValue
+
+      val result = stream.map(_.utf8String).runFold("")(_ + _).futureValue
+
+      result mustBe """[{"gzip":1},{"gzip":2}]"""
+    }
+
     "handle bad response when getting documents" in {
 
       val result = client.getDocuments("client.bad", "documentsTenant", "items").failed.futureValue
@@ -54,33 +64,39 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
       result mustBe a[DocumentBackupClientException]
     }
 
+    "handle unsupported encoding when getting documents" in {
+
+      val result = client.getDocuments("client.deflate", "documentsTenant", "items").failed.futureValue
+
+      result mustBe a[DocumentBackupClientException]
+    }
+
     "insert raw document" in {
 
-      val result = client.insertDocuments("client.token", "insertTenant", "items", Source.single(ByteString("""{"a":1}"""))).futureValue
+      val result = client.insertDocuments("client.token", "insertTenant", "items", Source.single(ByteString( """{"a":1}"""))).futureValue
 
       result mustBe 1
     }
 
     "handle bad response when inserting raw document" in {
 
-      val result = client.insertDocuments("client.bad", "insertTenant", "items", Source.single(ByteString("""{"a":1}"""))).failed.futureValue
+      val result = client.insertDocuments("client.bad", "insertTenant", "items", Source.single(ByteString( """{"a":1}"""))).failed.futureValue
 
       result mustBe a[DocumentBackupClientException]
       result.asInstanceOf[DocumentBackupClientException].message must include("bad request message")
       result.asInstanceOf[DocumentBackupClientException].message must include("400")
     }
 
-    "handle failed request" in {
+    "handle failed request when service unreachable" in {
 
       val client = new DefaultDocumentBackupClient("http://localhost:54392", Some("token"))
 
-      val response = client.insertDocuments("client.bad", "insertTenant", "items", Source.single(ByteString("""{"a":1}""")))
+      val response = client.insertDocuments("client.bad", "insertTenant", "items", Source.single(ByteString( """{"a":1}""")))
 
       whenReady(response.failed) { result ⇒
         result mustBe a[DocumentBackupClientException]
       }
     }
-
   }
 
   def extractToken: PartialFunction[HttpHeader, String] = {
@@ -101,18 +117,30 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
         } ~
           path("client.bad" / "data" / "items") {
             complete(StatusCodes.BadRequest)
+          } ~
+          path("client.gzip" / "data" / "items") {
+            encodeResponseWith(Gzip) {
+              complete(HttpEntity(ContentTypes.`application/json`, """[{"gzip":1},{"gzip":2}]"""))
+            }
+          } ~
+          path("client.deflate" / "data" / "items") {
+            encodeResponseWith(Deflate) {
+              complete(HttpEntity(ContentTypes.`application/json`, """[{"gzip":1},{"gzip":2}]"""))
+            }
           }
       }
     } ~
       pathPrefix("insertTenant") {
         post {
           path("client.token" / "data" / "items") {
-            entity(as[String]) { body =>
-              headerValuePF(extractToken) { token =>
-                if (body == """{"a":1}""" && token == "token") {
-                  complete(HttpEntity(ContentTypes.`application/json`, """{"documentsImported" : "1"}"""))
-                } else {
-                  complete(StatusCodes.BadRequest)
+            decodeRequestWith(Gzip) {
+              entity(as[String]) { body =>
+                headerValuePF(extractToken) { token =>
+                  if (body == """{"a":1}""" && token == "token") {
+                    complete(HttpEntity(ContentTypes.`application/json`, """{"documentsImported" : "1"}"""))
+                  } else {
+                    complete(StatusCodes.BadRequest)
+                  }
                 }
               }
             }

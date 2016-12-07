@@ -14,9 +14,10 @@ package com.hybris.core.dbr.document
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
+import akka.http.scaladsl.model.headers.HttpEncodings.gzip
+import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Compression, Source}
 import akka.stream.{Materializer, StreamTcpException}
 import akka.util.ByteString
 import com.hybris.core.dbr.exceptions.{DocumentBackupClientException, DocumentServiceClientException}
@@ -33,6 +34,8 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
                                   executionContext: ExecutionContext)
   extends DocumentBackupClient with CirceSupport with YaasHeaders {
 
+  val MaxBytesPerChunkDefault = 100 * 1024 * 1024
+
   private case class InsertResult(documentsImported: Int)
 
   private implicit val insertResultDecoder: Decoder[InsertResult] = deriveDecoder
@@ -43,13 +46,20 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
 
     val request = HttpRequest(
       uri = s"$documentBackupUrl/$tenant/$client/data/${`type`}",
-      headers = getHeaders(authorizationHeader, client, tenant))
+      headers = `Accept-Encoding`(gzip) :: getHeaders(authorizationHeader, client, tenant))
 
     Http()
       .singleRequest(request)
       .flatMap {
         case response if response.status.isSuccess() =>
-          Future.successful(response.entity.withoutSizeLimit().dataBytes)
+          val contentEncoding = getContentEncoding(response)
+          if (contentEncoding == gzip.value) {
+            Future.successful(response.entity.withoutSizeLimit().dataBytes.via(Compression.gunzip(MaxBytesPerChunkDefault)))
+          } else if (contentEncoding == HttpEncodings.identity.value) {
+            Future.successful(response.entity.withoutSizeLimit().dataBytes)
+          } else {
+            Future.failed(DocumentServiceClientException(s"Unsupported content encoding $contentEncoding"))
+          }
 
         case response =>
           response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒
@@ -71,10 +81,12 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
 
   override def insertDocuments(client: String, tenant: String, `type`: String, documents: Source[ByteString, _]): Future[Int] = {
 
+    val compressedDocuments = documents.via(Compression.gzip)
+
     val request = HttpRequest(method = HttpMethods.POST,
       uri = s"$documentBackupUrl/$tenant/$client/data/${`type`}",
-      entity = HttpEntity(ContentTypes.`application/json`, data = documents),
-      headers = getHeaders(authorizationHeader, client, tenant))
+      entity = HttpEntity(ContentTypes.`application/json`, data = compressedDocuments),
+      headers = `Content-Encoding`(gzip) :: getHeaders(authorizationHeader, client, tenant))
 
     Http()
       .singleRequest(request)
@@ -99,4 +111,9 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
           Future.failed(DocumentBackupClientException(s"Inserting documents encountered error. Reason: ${err.getMessage}"))
       }
   }
+
+  private def getContentEncoding(response: HttpResponse) = {
+    response.headers.find(_.name() == `Content-Encoding`.name).map(_.value()).getOrElse(HttpEncodings.identity.value)
+  }
+
 }
