@@ -34,7 +34,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
                                   executionContext: ExecutionContext)
   extends DocumentBackupClient with CirceSupport with YaasHeaders {
 
-  val MaxBytesPerChunkDefault = 100 * 1024 * 1024
+  val MaxBytesPerChunkDefault: Int = 100 * 1024 * 1024
 
   private case class InsertResult(documentsImported: Int)
 
