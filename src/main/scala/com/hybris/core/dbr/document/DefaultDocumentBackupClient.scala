@@ -58,6 +58,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
           } else if (contentEncoding == HttpEncodings.identity.value) {
             Future.successful(response.entity.withoutSizeLimit().dataBytes)
           } else {
+            response.entity.discardBytes()
             Future.failed(DocumentServiceClientException(s"Unsupported content encoding $contentEncoding"))
           }
 
