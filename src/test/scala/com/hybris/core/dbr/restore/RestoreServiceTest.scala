@@ -18,7 +18,7 @@ import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.RestoreTypeConfig
-import com.hybris.core.dbr.document.DocumentBackupClient
+import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.duration.DurationInt
@@ -58,7 +58,7 @@ class RestoreServiceTest extends BaseCoreTest {
             `type` == "type1" &&
             result == ByteString("""[{"type1":1},{"type1":2}]""")
           })
-        .returns(Future.successful(1))
+        .returns(Future.successful(InsertResult(1,1,0)))
       (documentServiceClient.insertDocuments _)
         .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
             val result = Await.result(documents.runWith(Sink.head), 1 second)
@@ -68,7 +68,7 @@ class RestoreServiceTest extends BaseCoreTest {
             `type` == "type2" &&
             result == ByteString("""[{"type2":1}]""")
           })
-        .returns(Future.successful(1))
+        .returns(Future.successful(InsertResult(1,1,0)))
       //@formatter:on
 
       val restoreService = new RestoreService(documentServiceClient, restoreDir.pathAsString)

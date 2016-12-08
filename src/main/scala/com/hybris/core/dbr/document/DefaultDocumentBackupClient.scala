@@ -27,6 +27,8 @@ import io.circe.generic.semiauto.deriveDecoder
 
 import scala.concurrent.{ExecutionContext, Future}
 
+case class InsertResult(totalDocuments: Int, inserted: Int, replaced: Int)
+
 class DefaultDocumentBackupClient(documentBackupUrl: String,
                                   token: Option[String])
                                  (implicit system: ActorSystem,
@@ -35,8 +37,6 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
   extends DocumentBackupClient with CirceSupport with YaasHeaders {
 
   val MaxBytesPerChunkDefault: Int = 100 * 1024 * 1024
-
-  private case class InsertResult(documentsImported: Int)
 
   private implicit val insertResultDecoder: Decoder[InsertResult] = deriveDecoder
 
@@ -72,7 +72,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
       }
   }
 
-  override def insertDocuments(client: String, tenant: String, `type`: String, documents: Source[ByteString, _]): Future[Int] = {
+  override def insertDocuments(client: String, tenant: String, `type`: String, documents: Source[ByteString, _]): Future[InsertResult] = {
 
     val compressedDocuments = documents.via(Compression.gzip)
 
@@ -86,7 +86,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
       .flatMap {
 
         case response if response.status.isSuccess() ⇒
-          Unmarshal(response).to[InsertResult].map(_.documentsImported)
+          Unmarshal(response).to[InsertResult]
 
         case response ⇒
           response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒

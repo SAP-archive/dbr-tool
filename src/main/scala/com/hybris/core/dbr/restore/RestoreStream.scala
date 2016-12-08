@@ -19,7 +19,7 @@ import akka.stream.IOResult
 import akka.stream.scaladsl.{FileIO, Flow, Source}
 import akka.util.ByteString
 import com.hybris.core.dbr.config.RestoreTypeConfig
-import com.hybris.core.dbr.document.DocumentBackupClient
+import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
 import com.hybris.core.dbr.model.RestoreTypeData
 
@@ -45,13 +45,16 @@ trait RestoreStream extends SLF4JLogging {
   }
 
   def insertDocuments(documentBackupClient: DocumentBackupClient)
-                     (implicit executionContext: ExecutionContext): Flow[RestoreTypeData, Int, NotUsed] = {
+                     (implicit executionContext: ExecutionContext): Flow[RestoreTypeData, InsertResult, NotUsed] = {
     Flow[RestoreTypeData]
       .mapAsync(Parallelism) { rtd =>
         documentBackupClient.insertDocuments(rtd.client, rtd.tenant, rtd.`type`, rtd.documents)
           .recover {
             case t: Throwable => throw RestoreException(t.getMessage)
-          }
+          }.map { ir ⇒
+          log.info(s"Client [${rtd.client}] Tenant [${rtd.tenant}] Type [${rtd.`type`}] - Processed ${ir.totalDocuments} documents: ${ir.inserted} inserted, ${ir.replaced} replaced.")
+          ir
+        }
       }
   }
 }

@@ -40,6 +40,6 @@ trait DocumentBackupClient {
     * @param documents a stream of documents
     * @return future with number of inserted documents
     */
-  def insertDocuments(client: String, tenant: String, `type`: String, documents: Source[ByteString, _]): Future[Int]
+  def insertDocuments(client: String, tenant: String, `type`: String, documents: Source[ByteString, _]): Future[InsertResult]
 
 }

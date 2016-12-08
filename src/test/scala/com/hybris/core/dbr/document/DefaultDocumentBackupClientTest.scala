@@ -84,7 +84,7 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
 
       val result = client.insertDocuments("client.token", "insertTenant", "items", Source.single(ByteString( """{"a":1}"""))).futureValue
 
-      result mustBe 1
+      result mustBe InsertResult(1,1,0)
     }
 
     "handle bad response when inserting raw document" in {
@@ -151,7 +151,7 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
               entity(as[String]) { body =>
                 headerValuePF(extractToken) { token =>
                   if (body == """{"a":1}""" && token == "token") {
-                    complete(HttpEntity(ContentTypes.`application/json`, """{"documentsImported" : "1"}"""))
+                    complete(HttpEntity(ContentTypes.`application/json`, """{"totalDocuments" : 1, "inserted" : 1, "replaced" : 0}"""))
                   } else {
                     complete(StatusCodes.BadRequest)
                   }

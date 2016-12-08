@@ -20,7 +20,7 @@ import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.RestoreTypeConfig
-import com.hybris.core.dbr.document.DocumentBackupClient
+import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
 import com.hybris.core.dbr.model.RestoreTypeData
 
@@ -126,14 +126,14 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
       (documentBackupClient.insertDocuments _)
         .when("client", "tenant1", "type1", fileSource1)
-        .returns(Future.successful(1))
+        .returns(Future.successful(InsertResult(1,1,0)))
       (documentBackupClient.insertDocuments _)
         .when("client", "tenant1", "type1", fileSource2)
-        .returns(Future.successful(1))
+        .returns(Future.successful(InsertResult(1,1,0)))
 
       val (source, sink) = TestSource.probe[RestoreTypeData]
         .via(insertDocuments(documentBackupClient))
-        .toMat(TestSink.probe[Int])(Keep.both)
+        .toMat(TestSink.probe[InsertResult])(Keep.both)
         .run()
 
       sink.request(10)
@@ -142,7 +142,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       source.sendNext(RestoreTypeData("client", "tenant1", "type1", fileSource2))
       source.sendComplete()
 
-      sink.expectNextUnordered(1, 1)
+      sink.expectNextUnordered(InsertResult(1,1,0), InsertResult(1,1,0))
       sink.expectComplete()
     }
 
@@ -157,7 +157,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
       val (source, sink) = TestSource.probe[RestoreTypeData]
         .via(insertDocuments(documentBackupClient))
-        .toMat(TestSink.probe[Int])(Keep.both)
+        .toMat(TestSink.probe[InsertResult])(Keep.both)
         .run()
 
       sink.request(10)
