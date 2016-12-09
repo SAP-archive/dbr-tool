@@ -40,4 +40,6 @@ trait AppConfig {
 
   val scopes = config.getStringList("api.scopes").asScala.toList
 
+  val readFileChunkSize = config.getInt("read-file-chunk-size")
+
 }

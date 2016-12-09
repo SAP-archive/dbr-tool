@@ -32,5 +32,4 @@ class RestoreService(documentBackupClient: DocumentBackupClient,
       .via(insertDocuments(documentBackupClient))
       .toMat(Sink.ignore)(Keep.right)
   }
-
 }

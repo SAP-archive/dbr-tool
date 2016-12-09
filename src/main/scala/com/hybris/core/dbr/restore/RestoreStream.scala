@@ -16,32 +16,41 @@ import java.nio.file.{Files, Paths}
 import akka.NotUsed
 import akka.event.slf4j.SLF4JLogging
 import akka.stream.IOResult
-import akka.stream.scaladsl.{FileIO, Flow, Source}
+import akka.stream.scaladsl.{FileIO, Flow, JsonFraming, Source}
 import akka.util.ByteString
-import com.hybris.core.dbr.config.RestoreTypeConfig
+import com.hybris.core.dbr.config.{AppConfig, RestoreTypeConfig}
 import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
 import com.hybris.core.dbr.model.RestoreTypeData
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait RestoreStream extends SLF4JLogging {
+trait RestoreStream extends SLF4JLogging with AppConfig {
 
   val Parallelism = 5
 
   def addDocuments(restoreDir: String): Flow[RestoreTypeConfig, RestoreTypeData, NotUsed] = {
     Flow[RestoreTypeConfig]
-      .map(config ⇒ RestoreTypeData(config.client, config.tenant, config.`type`, getFileSource(s"$restoreDir/${config.file}")))
+      .map(config ⇒
+        RestoreTypeData(config.client, config.tenant, config.`type`, getFileSource(s"$restoreDir/${config.file}", jsonByJson)))
   }
 
-  private def getFileSource(fileName: String): Source[ByteString, Future[IOResult]] = {
+  private def getFileSource(fileName: String,
+                            readStrategy: Source[ByteString, Future[IOResult]] ⇒ Source[ByteString, Future[IOResult]]) = {
     val file = Paths.get(fileName)
     if (Files.exists(file)) {
-      FileIO.fromPath(file)
+      readStrategy(FileIO.fromPath(file, readFileChunkSize))
     }
     else {
       throw RestoreException(s"File '$file' not found.")
     }
+  }
+
+  private def jsonByJson(fileSource: Source[ByteString, Future[IOResult]]) = {
+    fileSource
+      .via(JsonFraming.objectScanner(readFileChunkSize))
+      .intersperse(ByteString("["), ByteString(","), ByteString("]"))
+      .filterNot(_.startsWith(","))
   }
 
   def insertDocuments(documentBackupClient: DocumentBackupClient)
@@ -52,7 +61,8 @@ trait RestoreStream extends SLF4JLogging {
           .recover {
             case t: Throwable => throw RestoreException(t.getMessage)
           }.map { ir ⇒
-          log.info(s"Client [${rtd.client}] Tenant [${rtd.tenant}] Type [${rtd.`type`}] - Processed ${ir.totalDocuments} documents: ${ir.inserted} inserted, ${ir.replaced} replaced.")
+          log.info(s"Type '${rtd.`type`}' in tenant '${rtd.tenant}' restored. " +
+            s"Processed ${ir.totalDocuments} documents (${ir.inserted} inserted, ${ir.replaced} replaced).")
           ir
         }
       }
