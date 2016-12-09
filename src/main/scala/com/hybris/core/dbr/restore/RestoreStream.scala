@@ -47,7 +47,7 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
                             readStrategy: Source[ByteString, Future[IOResult]] ⇒ Source[ByteString, Future[IOResult]]): Source[ByteString, Future[IOResult]] = {
     val file = Paths.get(fileName)
     if (Files.exists(file)) {
-      readStrategy(FileIO.fromPath(file, readFileChunkSize))
+      readStrategy(FileIO.fromPath(file))
     }
     else {
       throw RestoreException(s"File '$file' not found.")
