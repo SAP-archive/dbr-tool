@@ -23,20 +23,28 @@ import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
 import com.hybris.core.dbr.model.RestoreTypeData
 
+import scala.collection.immutable.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 trait RestoreStream extends SLF4JLogging with AppConfig {
 
-  val Parallelism = 5
+  val Parallelism = 1
 
   def addDocuments(restoreDir: String): Flow[RestoreTypeConfig, RestoreTypeData, NotUsed] = {
     Flow[RestoreTypeConfig]
-      .map(config ⇒
-        RestoreTypeData(config.client, config.tenant, config.`type`, getFileSource(s"$restoreDir/${config.file}", jsonByJson)))
+      .flatMapConcat(config ⇒ {
+          val fileSource: Source[Seq[ByteString], Future[IOResult]] =
+            getFileSource(s"$restoreDir/${config.file}", jsonByJson)
+              .grouped(documentsUploadChunk)
+
+        fileSource.map{ documents ⇒
+          RestoreTypeData(config.client, config.tenant, config.`type`, Source(documents))
+        }
+      })
   }
 
   private def getFileSource(fileName: String,
-                            readStrategy: Source[ByteString, Future[IOResult]] ⇒ Source[ByteString, Future[IOResult]]) = {
+                            readStrategy: Source[ByteString, Future[IOResult]] ⇒ Source[ByteString, Future[IOResult]]): Source[ByteString, Future[IOResult]] = {
     val file = Paths.get(fileName)
     if (Files.exists(file)) {
       readStrategy(FileIO.fromPath(file, readFileChunkSize))

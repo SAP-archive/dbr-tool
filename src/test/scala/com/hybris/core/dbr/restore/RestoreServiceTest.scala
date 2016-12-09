@@ -51,22 +51,22 @@ class RestoreServiceTest extends BaseCoreTest {
       //@formatter:off
       (documentServiceClient.insertDocuments _)
         .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
-            val result = Await.result(documents.runWith(Sink.head), 1 second)
+            val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
 
             client == "client" &&
             tenant == "tenant" &&
             `type` == "type1" &&
-            result == ByteString("""[{"type1":1},{"type1":2}]""")
+            result == """[{"type1":1}{"type1":2}]"""
           })
         .returns(Future.successful(InsertResult(1,1,0)))
       (documentServiceClient.insertDocuments _)
         .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
-            val result = Await.result(documents.runWith(Sink.head), 1 second)
+            val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
 
             client == "client" &&
             tenant == "tenant" &&
             `type` == "type2" &&
-            result == ByteString("""[{"type2":1}]""")
+            result == """[{"type2":1}]"""
           })
         .returns(Future.successful(InsertResult(1,1,0)))
       //@formatter:on

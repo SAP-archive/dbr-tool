@@ -16,8 +16,8 @@ import com.typesafe.config.ConfigFactory
 import scala.collection.JavaConverters._
 
 /**
- * Application's main configuration, read from application.conf.
- */
+  * Application's main configuration, read from application.conf.
+  */
 trait AppConfig {
 
   private lazy val config = ConfigFactory.load()
@@ -27,9 +27,10 @@ trait AppConfig {
 
   lazy val environments = config.getList("environments.keys").unwrapped().asScala.toList
 
-  lazy val summaryFileName = config.getString("summary-file-name")
+  lazy val summaryFileName = config.getString("backup.summary-file-name")
 
   def documentServiceUrl(env: String): String = config.getString(s"environments.$env.document-url")
+
   def documentBackupUrl(env: String): String = config.getString(s"environments.$env.document-backup-url")
 
   def oauthUrl(env: String): String = config.getString(s"environments.$env.oauth-url")
@@ -40,6 +41,8 @@ trait AppConfig {
 
   val scopes = config.getStringList("api.scopes").asScala.toList
 
-  val readFileChunkSize = config.getInt("read-file-chunk-size")
+  val readFileChunkSize = config.getInt("restore.read-file-chunk-size")
+
+  val documentsUploadChunk = config.getInt("restore.no-documents-per-request")
 
 }

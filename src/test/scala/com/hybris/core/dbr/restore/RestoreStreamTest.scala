@@ -72,26 +72,45 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         case RestoreTypeData("client", "tenant1", "type1", documents) ⇒
           documents
             .runWith(TestSink.probe[ByteString])
-            .request(1)
-            .expectNextPF {
+            .request(4)
+            .expectNextChainingPF {
               case documents: ByteString ⇒
-                documents.utf8String must include("""{ "file1" : 1 }""")
-                documents.utf8String must include("""{ "file1" : 2 }""")
-            }
+                documents.utf8String must include("[")
+            }.expectNextChainingPF {
+            case documents: ByteString ⇒
+              documents.utf8String must include("""{ "file1" : 1 }""")
+          }.expectNextChainingPF {
+            case documents: ByteString ⇒
+              documents.utf8String must include("""{ "file1" : 2 }""")
+          }.expectNextPF {
+            case documents: ByteString ⇒
+              documents.utf8String must include("]")
+          }
       }
 
       sink.expectNextPF {
         case RestoreTypeData("client", "tenant1", "type2", documents) ⇒
           documents
             .runWith(TestSink.probe[ByteString])
-            .request(1)
-            .expectNextPF {
+            .request(5)
+            .expectNextChainingPF {
               case documents: ByteString ⇒
-                documents.utf8String must include("""{ "file2" : 1 }""")
-                documents.utf8String must include("""{ "file2" : 2 }""")
+                documents.utf8String must include("[")
+            }.expectNextChainingPF {
+            case documents: ByteString ⇒
+              documents.utf8String must include("""{ "file2" : 1 }""")
+          }.expectNextChainingPF {
+            case documents: ByteString ⇒
+              documents.utf8String must include("""{ "file2" : 2 }""")
+          }
+            .expectNextChainingPF {
+              case documents: ByteString ⇒
                 documents.utf8String must include("""{ "file2" : 3 }""")
             }
-
+            .expectNextPF {
+              case documents: ByteString ⇒
+                documents.utf8String must include("]")
+            }
       }
 
       sink.expectComplete()
@@ -126,10 +145,10 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
       (documentBackupClient.insertDocuments _)
         .when("client", "tenant1", "type1", fileSource1)
-        .returns(Future.successful(InsertResult(1,1,0)))
+        .returns(Future.successful(InsertResult(1, 1, 0)))
       (documentBackupClient.insertDocuments _)
         .when("client", "tenant1", "type1", fileSource2)
-        .returns(Future.successful(InsertResult(1,1,0)))
+        .returns(Future.successful(InsertResult(1, 1, 0)))
 
       val (source, sink) = TestSource.probe[RestoreTypeData]
         .via(insertDocuments(documentBackupClient))
@@ -142,7 +161,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       source.sendNext(RestoreTypeData("client", "tenant1", "type1", fileSource2))
       source.sendComplete()
 
-      sink.expectNextUnordered(InsertResult(1,1,0), InsertResult(1,1,0))
+      sink.expectNextUnordered(InsertResult(1, 1, 0), InsertResult(1, 1, 0))
       sink.expectComplete()
     }
 
