@@ -14,7 +14,7 @@ package com.hybris.core.dbr.restore
 import java.nio.file.Paths
 
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{FileIO, Keep}
+import akka.stream.scaladsl.{FileIO, Keep, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.util.ByteString
 import better.files.File
@@ -24,7 +24,7 @@ import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
 import com.hybris.core.dbr.model.RestoreTypeData
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 
 class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
@@ -116,6 +116,47 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       sink.expectComplete()
     }
 
+    "add documents from file grouping by 1000" in {
+
+      import scala.concurrent.duration.DurationInt
+
+      val testDir = File.newTemporaryDirectory()
+      val fileName1 = randomName
+
+      val result = Await.result(generateJsons(2001), 10 seconds)
+
+      testDir / fileName1 overwrite
+        s"""
+           |[
+           | $result
+           |]
+        """.stripMargin
+
+
+      val (source, sink) = TestSource.probe[RestoreTypeConfig]
+        .via(addDocuments(testDir.pathAsString))
+        .toMat(TestSink.probe[RestoreTypeData])(Keep.both)
+        .run()
+
+      sink.request(3)
+
+      source.sendNext(RestoreTypeConfig("client", "tenant1", "type1", fileName1))
+      source.sendComplete()
+
+      sink.expectNextChainingPF {
+        case RestoreTypeData("client", "tenant1", "type1", documents) ⇒
+          documents.runFold(0)((acc, _) ⇒ acc + 1).futureValue mustBe 1000
+      }.expectNextChainingPF {
+        case RestoreTypeData("client", "tenant1", "type1", documents) ⇒
+          documents.runFold(0)((acc, _) ⇒ acc + 1).futureValue mustBe 1000
+      }.expectNextChainingPF {
+        case RestoreTypeData("client", "tenant1", "type1", documents) ⇒
+          documents.runFold(0)((acc, _) ⇒ acc + 1).futureValue mustBe 3
+      }
+
+      sink.expectComplete()
+    }
+
     "fail when type's file not found" in {
 
       val testDir = File.newTemporaryDirectory()
@@ -188,4 +229,10 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       error mustBe a[RestoreException]
     }
   }
+
+  private def generateJsons(n: Int) =
+    Source
+      .repeat("""{a: "1"}""")
+      .take(n)
+      .runFold("")((acc, t) ⇒ acc ++ t)
 }
