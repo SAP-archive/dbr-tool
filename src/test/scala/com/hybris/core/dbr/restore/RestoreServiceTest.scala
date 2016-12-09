@@ -56,7 +56,7 @@ class RestoreServiceTest extends BaseCoreTest {
             client == "client" &&
             tenant == "tenant" &&
             `type` == "type1" &&
-            result == """[{"type1":1}{"type1":2}]"""
+            result == """{"type1":1}{"type1":2}"""
           })
         .returns(Future.successful(InsertResult(1,1,0)))
       (documentServiceClient.insertDocuments _)
@@ -66,7 +66,7 @@ class RestoreServiceTest extends BaseCoreTest {
             client == "client" &&
             tenant == "tenant" &&
             `type` == "type2" &&
-            result == """[{"type2":1}]"""
+            result == """{"type2":1}"""
           })
         .returns(Future.successful(InsertResult(1,1,0)))
       //@formatter:on

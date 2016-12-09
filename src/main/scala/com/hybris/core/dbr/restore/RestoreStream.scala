@@ -55,10 +55,7 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
   }
 
   private def jsonByJson(fileSource: Source[ByteString, Future[IOResult]]) = {
-    fileSource
-      .via(JsonFraming.objectScanner(readFileChunkSize))
-      .intersperse(ByteString("["), ByteString(","), ByteString("]"))
-      .filterNot(_.startsWith(","))
+    fileSource.via(JsonFraming.objectScanner(readFileChunkSize))
   }
 
   def insertDocuments(documentBackupClient: DocumentBackupClient)
