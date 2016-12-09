@@ -216,7 +216,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
     }
   }
 
-  private def generateJsons(n: Int) =
+  private def generateJsons(n: Long) =
     Source
       .repeat("""{a: "1"}""")
       .take(n)

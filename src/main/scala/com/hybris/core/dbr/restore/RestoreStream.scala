@@ -23,7 +23,6 @@ import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
 import com.hybris.core.dbr.model.RestoreTypeData
 
-import scala.collection.immutable.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 trait RestoreStream extends SLF4JLogging with AppConfig {
@@ -33,29 +32,23 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
   def addDocuments(restoreDir: String): Flow[RestoreTypeConfig, RestoreTypeData, NotUsed] = {
     Flow[RestoreTypeConfig]
       .flatMapConcat(config ⇒ {
-          val fileSource: Source[Seq[ByteString], Future[IOResult]] =
-            getFileSource(s"$restoreDir/${config.file}", jsonByJson)
-              .grouped(documentsUploadChunk)
-
-        fileSource.map{ documents ⇒
-          RestoreTypeData(config.client, config.tenant, config.`type`, Source(documents))
-        }
+        getFileSource(s"$restoreDir/${config.file}")
+          .via(JsonFraming.objectScanner(readFileChunkSize))
+          .grouped(documentsUploadChunk)
+          .map { documents ⇒
+            RestoreTypeData(config.client, config.tenant, config.`type`, Source(documents))
+          }
       })
   }
 
-  private def getFileSource(fileName: String,
-                            readStrategy: Source[ByteString, Future[IOResult]] ⇒ Source[ByteString, Future[IOResult]]): Source[ByteString, Future[IOResult]] = {
+  private def getFileSource(fileName: String): Source[ByteString, Future[IOResult]] = {
     val file = Paths.get(fileName)
     if (Files.exists(file)) {
-      readStrategy(FileIO.fromPath(file))
+      FileIO.fromPath(file)
     }
     else {
       throw RestoreException(s"File '$file' not found.")
     }
-  }
-
-  private def jsonByJson(fileSource: Source[ByteString, Future[IOResult]]) = {
-    fileSource.via(JsonFraming.objectScanner(readFileChunkSize))
   }
 
   def insertDocuments(documentBackupClient: DocumentBackupClient)
