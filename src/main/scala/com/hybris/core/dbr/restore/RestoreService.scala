@@ -28,8 +28,7 @@ class RestoreService(documentBackupClient: DocumentBackupClient,
 
   private def createGraph(types: List[RestoreTypeConfig]): RunnableGraph[Future[Done]] = {
     Source(types)
-      .via(addDocuments(restoreDir))
-      .via(insertDocuments(documentBackupClient))
+      .via(insertType(restoreDir, documentBackupClient))
       .toMat(Sink.ignore)(Keep.right)
   }
 }

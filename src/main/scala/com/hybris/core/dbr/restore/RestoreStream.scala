@@ -21,7 +21,6 @@ import akka.util.ByteString
 import com.hybris.core.dbr.config.{AppConfig, RestoreTypeConfig}
 import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
-import com.hybris.core.dbr.model.RestoreTypeData
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,15 +28,35 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
 
   val Parallelism = 1
 
-  def addDocuments(restoreDir: String): Flow[RestoreTypeConfig, RestoreTypeData, NotUsed] = {
+  def insertType(restoreDir: String, documentBackupClient: DocumentBackupClient)
+                (implicit executionContext: ExecutionContext): Flow[RestoreTypeConfig, InsertResult, NotUsed] = {
     Flow[RestoreTypeConfig]
       .flatMapConcat(config ⇒ {
+        log.info(s"Restoring '${config.tenant}/${config.client}/${config.`type`}':")
         getFileSource(s"$restoreDir/${config.file}")
           .via(JsonFraming.objectScanner(readFileChunkSize))
           .grouped(documentsUploadChunk)
-          .map { documents ⇒
-            RestoreTypeData(config.client, config.tenant, config.`type`, Source(documents))
+          .mapAsync(Parallelism) { rtd =>
+            documentBackupClient.insertDocuments(config.client, config.tenant, config.`type`, Source(rtd))
+              .recover {
+                case t: Throwable => throw RestoreException(t.getMessage)
+              }.map { ir ⇒
+              log.info(s"\t - Restoring ${ir.totalDocuments} documents (${ir.inserted} inserted, ${ir.replaced} replaced).")
+              ir
+            }
           }
+          .fold(InsertResult(0, 0, 0))((acc, t) ⇒ acc.copy(
+            totalDocuments = acc.totalDocuments + t.totalDocuments,
+            inserted = acc.inserted + t.inserted,
+            replaced = acc.replaced + t.replaced)
+          )
+          .map(ir ⇒ {
+            if (ir.totalDocuments > 1000) {
+              log.info(s"Restoring '${config.tenant}/${config.client}/${config.`type`}' done!")
+              log.info(s"Restored ${ir.totalDocuments} documents (${ir.inserted} inserted, ${ir.replaced} replaced).\n")
+            }
+            ir
+          })
       })
   }
 
@@ -49,20 +68,5 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
     else {
       throw RestoreException(s"File '$file' not found.")
     }
-  }
-
-  def insertDocuments(documentBackupClient: DocumentBackupClient)
-                     (implicit executionContext: ExecutionContext): Flow[RestoreTypeData, InsertResult, NotUsed] = {
-    Flow[RestoreTypeData]
-      .mapAsync(Parallelism) { rtd =>
-        documentBackupClient.insertDocuments(rtd.client, rtd.tenant, rtd.`type`, rtd.documents)
-          .recover {
-            case t: Throwable => throw RestoreException(t.getMessage)
-          }.map { ir ⇒
-          log.info(s"Type '${rtd.`type`}' in tenant '${rtd.tenant}' restored. " +
-            s"Processed ${ir.totalDocuments} documents (${ir.inserted} inserted, ${ir.replaced} replaced).")
-          ir
-        }
-      }
   }
 }
