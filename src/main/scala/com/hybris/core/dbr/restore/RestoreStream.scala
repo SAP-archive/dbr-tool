@@ -27,38 +27,54 @@ import scala.concurrent.{ExecutionContext, Future}
 trait RestoreStream extends SLF4JLogging with AppConfig {
 
   val Parallelism = 1
+  val logAbove = 1000
 
   def insertType(restoreDir: String, documentBackupClient: DocumentBackupClient)
                 (implicit executionContext: ExecutionContext): Flow[RestoreTypeConfig, InsertResult, NotUsed] = {
     Flow[RestoreTypeConfig]
       .flatMapConcat(config ⇒ {
-        log.info(s"Restoring '${config.tenant}/${config.client}/${config.`type`}':")
-        getFileSource(s"$restoreDir/${config.file}")
-          .via(JsonFraming.objectScanner(readFileChunkSize))
-          .grouped(documentsUploadChunk)
-          .mapAsync(Parallelism) { rtd =>
-            documentBackupClient.insertDocuments(config.client, config.tenant, config.`type`, Source(rtd))
-              .recover {
-                case t: Throwable => throw RestoreException(t.getMessage)
-              }.map { ir ⇒
-              log.info(s"\t - Restoring ${ir.totalDocuments} documents (${ir.inserted} inserted, ${ir.replaced} replaced).")
-              ir
-            }
-          }
-          .fold(InsertResult(0, 0, 0))((acc, t) ⇒ acc.copy(
-            totalDocuments = acc.totalDocuments + t.totalDocuments,
-            inserted = acc.inserted + t.inserted,
-            replaced = acc.replaced + t.replaced)
-          )
-          .map(ir ⇒ {
-            if (ir.totalDocuments > 1000) {
-              log.info(s"Restoring '${config.tenant}/${config.client}/${config.`type`}' done!")
-              log.info(s"Restored ${ir.totalDocuments} documents (${ir.inserted} inserted, ${ir.replaced} replaced).\n")
-            }
-            ir
-          })
+        configToFileChunks(restoreDir, config)
+          .via(insert(documentBackupClient, config))
+          .via(aggregateAndLogResults(config))
       })
   }
+
+  private[restore] def configToFileChunks(restoreDir: String, rtc: RestoreTypeConfig): Source[Source[ByteString, _], _] = {
+    log.info(s"Restoring '${rtc.tenant}/${rtc.client}/${rtc.`type`}':")
+    getFileSource(s"$restoreDir/${rtc.file}")
+      .via(JsonFraming.objectScanner(readFileChunkSize))
+      .grouped(documentsUploadChunk)
+      .map(Source(_))
+  }
+
+  private[restore] def insert(documentBackupClient: DocumentBackupClient, rtc: RestoreTypeConfig)
+                             (implicit executionContext: ExecutionContext): Flow[Source[ByteString, _], InsertResult, NotUsed] = {
+    Flow[Source[ByteString, _]]
+      .mapAsync(Parallelism) { rtd =>
+        documentBackupClient.insertDocuments(rtc.client, rtc.tenant, rtc.`type`, rtd)
+          .recover {
+            case t: Throwable => throw RestoreException(t.getMessage)
+          }.map { ir ⇒
+          log.info(s"\t - Restoring ${ir.totalDocuments} documents (${ir.inserted} inserted, ${ir.replaced} replaced).")
+          ir
+        }
+      }
+  }
+
+  private[restore] def aggregateAndLogResults(rtc: RestoreTypeConfig): Flow[InsertResult, InsertResult, NotUsed] =
+    Flow[InsertResult]
+      .fold(InsertResult(0, 0, 0))((acc, t) ⇒ acc.copy(
+        totalDocuments = acc.totalDocuments + t.totalDocuments,
+        inserted = acc.inserted + t.inserted,
+        replaced = acc.replaced + t.replaced)
+      )
+      .map(ir ⇒ {
+        if (ir.totalDocuments > logAbove) {
+          log.info(s"Restoring '${rtc.tenant}/${rtc.client}/${rtc.`type`}' done!")
+          log.info(s"Restored ${ir.totalDocuments} documents (${ir.inserted} inserted, ${ir.replaced} replaced).\n")
+        }
+        ir
+      })
 
   private def getFileSource(fileName: String): Source[ByteString, Future[IOResult]] = {
     val file = Paths.get(fileName)
