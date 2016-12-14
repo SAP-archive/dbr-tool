@@ -33,13 +33,13 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
                 (implicit executionContext: ExecutionContext): Flow[RestoreTypeConfig, InsertResult, NotUsed] = {
     Flow[RestoreTypeConfig]
       .flatMapConcat(config ⇒ {
-        configToFileChunks(restoreDir, config)
-          .via(insert(documentBackupClient, config))
+        configToFileChunksSource(restoreDir, config)
+          .via(insertDocuments(documentBackupClient, config))
           .via(aggregateAndLogResults(config))
       })
   }
 
-  private[restore] def configToFileChunks(restoreDir: String, rtc: RestoreTypeConfig): Source[Source[ByteString, _], _] = {
+  private[restore] def configToFileChunksSource(restoreDir: String, rtc: RestoreTypeConfig): Source[Source[ByteString, _], _] = {
     log.info(s"Restoring '${rtc.tenant}/${rtc.client}/${rtc.`type`}':")
     getFileSource(s"$restoreDir/${rtc.file}")
       .via(JsonFraming.objectScanner(readFileChunkSize))
@@ -47,8 +47,8 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
       .map(Source(_))
   }
 
-  private[restore] def insert(documentBackupClient: DocumentBackupClient, rtc: RestoreTypeConfig)
-                             (implicit executionContext: ExecutionContext): Flow[Source[ByteString, _], InsertResult, NotUsed] = {
+  private[restore] def insertDocuments(documentBackupClient: DocumentBackupClient, rtc: RestoreTypeConfig)
+                                      (implicit executionContext: ExecutionContext): Flow[Source[ByteString, _], InsertResult, NotUsed] = {
     Flow[Source[ByteString, _]]
       .mapAsync(Parallelism) { rtd =>
         documentBackupClient.insertDocuments(rtc.client, rtc.tenant, rtc.`type`, rtd)
@@ -82,7 +82,7 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
       FileIO.fromPath(file)
     }
     else {
-      throw RestoreException(s"File '$file' not found.")
+      Source.failed(RestoreException(s"File '$file' not found.")).asInstanceOf[Source[ByteString, Future[IOResult]]]
     }
   }
 }
