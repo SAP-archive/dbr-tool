@@ -14,7 +14,8 @@ package com.hybris.core.dbr.document
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
+import akka.http.scaladsl.model.headers.HttpEncodings.identity
+import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.{Materializer, StreamTcpException}
 import com.hybris.core.dbr.exceptions.DocumentServiceClientException
@@ -41,7 +42,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
     val request = HttpRequest(
       uri = s"$documentServiceUrl/$tenant/$client",
-      headers = getHeaders(authorizationHeader, client, tenant))
+      headers = `Accept-Encoding`(identity) :: getHeaders(authorizationHeader, client, tenant))
 
     Http()
       .singleRequest(request)

@@ -32,6 +32,7 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
                 (implicit executionContext: ExecutionContext): Flow[RestoreTypeConfig, InsertResult, NotUsed] = {
     Flow[RestoreTypeConfig]
       .flatMapConcat(config ⇒ {
+        log.info(s"Restoring tenant '${config.tenant}' type '${config.`type`}'")
         configToFileChunksSource(restoreDir, config)
           .via(insertDocuments(documentBackupClient, config))
           .via(aggregateAndLogResults(config))
@@ -54,7 +55,7 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
             case t: Throwable => throw RestoreException(t.getMessage)
           }.map { ir ⇒
           if (ir.totalDocuments == documentsUploadChunk) {
-            log.info(s"\t - Restoring tenant '${rtc.tenant} type ${rtc.`type`}' - ${ir.totalDocuments} documents, (${ir.inserted} inserted, ${ir.replaced} replaced).")
+            log.info(s"\t - Restoring tenant '${rtc.tenant}' type '${rtc.`type`}' - ${ir.totalDocuments} documents, (${ir.inserted} inserted, ${ir.replaced} replaced).")
           }
           ir
         }
@@ -69,7 +70,7 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
         replaced = acc.replaced + t.replaced)
       )
       .map(ir ⇒ {
-        log.info(s"Restored tenant '${rtc.tenant} type ${rtc.`type`}'. Total ${ir.totalDocuments} documents, (${ir.inserted} inserted, ${ir.replaced} replaced).")
+        log.info(s"Restored tenant '${rtc.tenant}' type '${rtc.`type`}'. Total ${ir.totalDocuments} documents, (${ir.inserted} inserted, ${ir.replaced} replaced).")
         ir
       })
 

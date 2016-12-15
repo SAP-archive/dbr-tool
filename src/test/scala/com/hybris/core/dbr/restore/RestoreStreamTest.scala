@@ -52,16 +52,14 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
           .run()
 
       stream.request(2)
-      stream.expectNextPF {
-        case s: Source[ByteString, _] ⇒
-          s.runWith(TestSink.probe[ByteString]).request(2).expectNextChainingPF {
-            case documents: ByteString ⇒
-              documents.utf8String must include("""{ "file1" : 1 }""")
-          }.expectNextChainingPF {
-            case documents: ByteString ⇒
-              documents.utf8String must include("""{ "file1" : 2 }""")
-          }
-      }
+
+      val documents = stream.expectNext()
+
+      val documentsProbe = documents.runWith(TestSink.probe[ByteString])
+      documentsProbe.request(2)
+      documentsProbe.expectNext().utf8String must include("""{ "file1" : 1 }""")
+      documentsProbe.expectNext().utf8String must include("""{ "file1" : 2 }""")
+      documentsProbe.expectComplete()
 
       stream.expectComplete()
     }
@@ -89,17 +87,9 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
       stream.request(3)
 
-      stream.expectNextChainingPF {
-        case documents: Source[ByteString, _] ⇒
-          documents.runFold(0)((acc, _) ⇒ acc + 1).futureValue mustBe 1000
-      }.expectNextChainingPF {
-        case documents: Source[ByteString, _] ⇒
-          documents.runFold(0)((acc, _) ⇒ acc + 1).futureValue mustBe 1000
-      }.expectNextChainingPF {
-        case documents: Source[ByteString, _] ⇒
-          documents.runFold(0)((acc, _) ⇒ acc + 1).futureValue mustBe 1
-      }
-
+      stream.expectNext().runFold(0)((acc, _) ⇒ acc + 1).futureValue mustBe 1000
+      stream.expectNext().runFold(0)((acc, _) ⇒ acc + 1).futureValue mustBe 1000
+      stream.expectNext().runFold(0)((acc, _) ⇒ acc + 1).futureValue mustBe 1
       stream.expectComplete()
     }
 
@@ -201,7 +191,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
   private def generateJsons(n: Long) =
     Source
-      .repeat("""{a: "1"}""")
+      .repeat( """{a: "1"}""")
       .take(n)
       .runFold("")((acc, t) ⇒ acc ++ t)
 
