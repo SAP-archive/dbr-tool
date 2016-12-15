@@ -27,7 +27,6 @@ import scala.concurrent.{ExecutionContext, Future}
 trait RestoreStream extends SLF4JLogging with AppConfig {
 
   val Parallelism = 1
-  val logAbove = 1000
 
   def insertType(restoreDir: String, documentBackupClient: DocumentBackupClient)
                 (implicit executionContext: ExecutionContext): Flow[RestoreTypeConfig, InsertResult, NotUsed] = {
@@ -40,7 +39,6 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
   }
 
   private[restore] def configToFileChunksSource(restoreDir: String, rtc: RestoreTypeConfig): Source[Source[ByteString, _], _] = {
-    log.info(s"Restoring '${rtc.tenant}/${rtc.client}/${rtc.`type`}':")
     getFileSource(s"$restoreDir/${rtc.file}")
       .via(JsonFraming.objectScanner(readFileChunkSize))
       .grouped(documentsUploadChunk)
@@ -55,7 +53,9 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
           .recover {
             case t: Throwable => throw RestoreException(t.getMessage)
           }.map { ir ⇒
-          log.info(s"\t - Restoring ${ir.totalDocuments} documents (${ir.inserted} inserted, ${ir.replaced} replaced).")
+          if (ir.totalDocuments == documentsUploadChunk) {
+            log.info(s"\t - Restoring tenant '${rtc.tenant} type ${rtc.`type`}' - ${ir.totalDocuments} documents, (${ir.inserted} inserted, ${ir.replaced} replaced).")
+          }
           ir
         }
       }
@@ -69,10 +69,7 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
         replaced = acc.replaced + t.replaced)
       )
       .map(ir ⇒ {
-        if (ir.totalDocuments > logAbove) {
-          log.info(s"Restoring '${rtc.tenant}/${rtc.client}/${rtc.`type`}' done!")
-          log.info(s"Restored ${ir.totalDocuments} documents (${ir.inserted} inserted, ${ir.replaced} replaced).\n")
-        }
+        log.info(s"Restored tenant '${rtc.tenant} type ${rtc.`type`}'. Total ${ir.totalDocuments} documents, (${ir.inserted} inserted, ${ir.replaced} replaced).")
         ir
       })
 
