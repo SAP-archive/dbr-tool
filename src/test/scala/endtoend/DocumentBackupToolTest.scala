@@ -42,7 +42,7 @@ class DocumentBackupToolTest extends BaseCoreTest {
       val clientSecret = sys.env("CLIENT_SECRET")
 
       val scopes = List("hybris.document_view hybris.document_manage")
-      val usToken = new OAuthClient("https://api.yaas.io/hybris/oauth2/v1/token",
+      val usToken = new OAuthClient("https://api.us.yaas.io/hybris/oauth2/v1/token",
         clientId,
         clientSecret,
         scopes).getToken.futureValue
@@ -65,7 +65,7 @@ class DocumentBackupToolTest extends BaseCoreTest {
         |	"b": true
         |}""".stripMargin
 
-      val usDocumentId = insertDocument("https://api.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`, document).futureValue
+      val usDocumentId = insertDocument("https://api.us.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`, document).futureValue
 
       // Prepare config file
       val testDir = File.newTemporaryDirectory()
@@ -98,7 +98,7 @@ class DocumentBackupToolTest extends BaseCoreTest {
       documentFromEu must include(usDocumentId)
 
       // Cleanup
-      deleteType("https://api.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`).futureValue
+      deleteType("https://api.us.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`).futureValue
       deleteType("https://api.eu.yaas.io/hybris/document/v1", euToken, "framefrog", "framefrog.mycomicsshop", `type`).futureValue
     }
   }
