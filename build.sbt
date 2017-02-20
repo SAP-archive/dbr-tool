@@ -12,46 +12,57 @@
 
 name := "dbr"
 
-version := "0.1.2"
+version := "0.2.0"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.1"
 
 libraryDependencies ++= {
-  val akkaVersion = "2.4.14"
-  val akkaHttpVersion = "10.0.0"
-  val circeVersion = "0.6.1"
+  object Versions {
+    val akka = "2.4.17"
+    val akkaHttp = "10.0.3"
+    val akkaHttpCirce = "1.12.0"
+    val cats = "0.9.0"
+    val circe = "0.7.0"
+    val scalaLogging = "3.5.0"
+    val typesafeConfig = "1.3.1"
+    val betterFiles = "2.17.1"
+    val scalaTest = "3.0.1"
+    val logback = "1.2.1"
+    val scopt = "3.5.0"
+    val scalaMock = "3.5.0"
+  }
 
   Seq(
-    "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion,
-    "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-    "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+    "com.typesafe.akka" %% "akka-http-core" % Versions.akkaHttp,
+    "com.typesafe.akka" %% "akka-stream" % Versions.akka,
+    "com.typesafe.akka" %% "akka-slf4j" % Versions.akka,
 
     // files
-    "com.github.pathikrit" %% "better-files" % "2.16.0",
+    "com.github.pathikrit" %% "better-files" % Versions.betterFiles,
 
     // cmd parameters
-    "com.github.scopt" %% "scopt" % "3.5.0",
+    "com.github.scopt" %% "scopt" % Versions.scopt,
 
     // circe
-    "de.heikoseeberger" %% "akka-http-circe" % "1.11.0",
-    "io.circe" %% "circe-core" % circeVersion,
-    "io.circe" %% "circe-generic" % circeVersion,
-    "io.circe" %% "circe-parser" % circeVersion,
+    "de.heikoseeberger" %% "akka-http-circe" % Versions.akkaHttpCirce,
+    "io.circe" %% "circe-core" % Versions.circe,
+    "io.circe" %% "circe-generic" % Versions.circe,
+    "io.circe" %% "circe-parser" % Versions.circe,
 
-    "org.typelevel" %% "cats" % "0.8.1",
+    "org.typelevel" %% "cats" % Versions.cats,
 
     // configuration
-    "com.typesafe" % "config" % "1.3.1",
+    "com.typesafe" % "config" % Versions.typesafeConfig,
 
     // logging
-    "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
-    "ch.qos.logback" % "logback-classic" % "1.1.7",
+    "com.typesafe.scala-logging" %% "scala-logging" % Versions.scalaLogging,
+    "ch.qos.logback" % "logback-classic" % Versions.logback,
 
     // tests
-    "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "test",
-    "org.scalatest" %% "scalatest" % "2.2.6" % "test"
+    "com.typesafe.akka" %% "akka-stream-testkit" % Versions.akka % "test",
+    "org.scalatest" %% "scalatest" % Versions.scalaTest % "test"
       exclude("org.scala-lang", "scala-reflect"),
-    "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test"
+    "org.scalamock" %% "scalamock-scalatest-support" % Versions.scalaMock % "test"
       exclude("org.scala-lang", "scala-reflect")
   )
 }
@@ -61,7 +72,6 @@ scalacOptions ++= Seq(
   "-deprecation",
   "-Xlint",
   "-language:_",
-  "-target:jvm-1.7",
   "-encoding", "UTF-8",
   "-language:postfixOps",
   "-Ywarn-adapted-args",

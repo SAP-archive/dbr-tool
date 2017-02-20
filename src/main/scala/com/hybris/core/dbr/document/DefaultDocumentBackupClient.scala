@@ -45,7 +45,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
   override def getDocuments(client: String, tenant: String, `type`: String): Future[Source[ByteString, Any]] = {
 
     val request = HttpRequest(
-      uri = s"$documentBackupUrl/$tenant/$client/data/${`type`}",
+      uri = s"$documentBackupUrl/data/$tenant/${`type`}",
       headers = `Accept-Encoding`(gzip) :: getHeaders(authorizationHeader, client, tenant))
 
     Http()
@@ -77,7 +77,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
     val compressedDocuments = documents.via(Compression.gzip)
 
     val request = HttpRequest(method = HttpMethods.POST,
-      uri = s"$documentBackupUrl/$tenant/$client/data/${`type`}",
+      uri = s"$documentBackupUrl/data/$tenant/${`type`}",
       entity = HttpEntity(ContentTypes.`application/json`, data = compressedDocuments),
       headers = `Content-Encoding`(gzip) :: getHeaders(authorizationHeader, client, tenant))
 

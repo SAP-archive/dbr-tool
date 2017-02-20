@@ -29,8 +29,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 /**
-  * Components of backup stream.
-  */
+ * Components of backup stream.
+ */
 trait BackupStream extends SLF4JLogging {
 
   val Parallelism = 5
@@ -51,10 +51,11 @@ trait BackupStream extends SLF4JLogging {
             .getTypes(ct.client, ct.tenant)
             .map(types => ct.copy(types = types))
 
-          result.onSuccess {
-            case elem =>
+          result.onComplete {
+            case Success(elem) =>
               val typesStr = elem.types.mkString(", ")
               log.info(s"Types [$typesStr] for tenant '${elem.tenant}' received.")
+            case Failure(_) ⇒
           }
 
           result

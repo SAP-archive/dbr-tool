@@ -41,7 +41,7 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
 
     "get documents" in {
 
-      val stream = client.getDocuments("client.token", "documentsTenant", "items").futureValue
+      val stream = client.getDocuments("client", "tenant", "token").futureValue
 
       val result = stream.map(_.utf8String).runFold("")(_ + _).futureValue
 
@@ -50,7 +50,7 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
 
     "get document encoded with gzip" in {
 
-      val stream = client.getDocuments("client.gzip", "documentsTenant", "items").futureValue
+      val stream = client.getDocuments("client", "tenant", "gzip").futureValue
 
       val result = stream.map(_.utf8String).runFold("")(_ + _).futureValue
 
@@ -59,37 +59,37 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
 
     "handle bad response when getting documents" in {
 
-      val result = client.getDocuments("client.bad", "documentsTenant", "items").failed.futureValue
+      val result = client.getDocuments("client", "tenant", "bad").failed.futureValue
 
       result mustBe a[DocumentBackupClientException]
-      result.getMessage must include ("bad request message")
+      result.getMessage must include("bad request message")
     }
 
-    "handle bad response ecoded with gzip when getting documents" in {
+    "handle bad response encoded with gzip when getting documents" in {
 
-      val result = client.getDocuments("client.badGzip", "documentsTenant", "items").failed.futureValue
+      val result = client.getDocuments("client", "tenant", "badGzip").failed.futureValue
 
       result mustBe a[DocumentBackupClientException]
-      result.getMessage must include ("bad gzip request message")
+      result.getMessage must include("bad gzip request message")
     }
 
     "handle unsupported encoding when getting documents" in {
 
-      val result = client.getDocuments("client.deflate", "documentsTenant", "items").failed.futureValue
+      val result = client.getDocuments("client", "tenant", "deflate").failed.futureValue
 
       result mustBe a[DocumentBackupClientException]
     }
 
     "insert raw document" in {
 
-      val result = client.insertDocuments("client.token", "insertTenant", "items", Source.single(ByteString( """{"a":1}"""))).futureValue
+      val result = client.insertDocuments("client", "tenant", "token", Source.single(ByteString( """{"a":1}"""))).futureValue
 
-      result mustBe InsertResult(1,1,0)
+      result mustBe InsertResult(1, 1, 0)
     }
 
     "handle bad response when inserting raw document" in {
 
-      val result = client.insertDocuments("client.bad", "insertTenant", "items", Source.single(ByteString( """{"a":1}"""))).failed.futureValue
+      val result = client.insertDocuments("client", "tenant", "bad", Source.single(ByteString( """{"a":1}"""))).failed.futureValue
 
       result mustBe a[DocumentBackupClientException]
       result.asInstanceOf[DocumentBackupClientException].message must include("bad request message")
@@ -108,14 +108,14 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
     }
   }
 
-  def extractToken: PartialFunction[HttpHeader, String] = {
+  private def extractToken: PartialFunction[HttpHeader, String] = {
     case Authorization(OAuth2BearerToken(token)) => token
   }
 
-  val route =
-    pathPrefix("documentsTenant") {
+  private val route =
+    pathPrefix("data" / "tenant") {
       get {
-        path("client.token" / "data" / "items") {
+        path("token") {
           headerValuePF(extractToken) { token =>
             if (token == "token") {
               complete(HttpEntity(ContentTypes.`application/json`, """[{"doc":1},{"doc":2}]"""))
@@ -124,48 +124,45 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
             }
           }
         } ~
-          path("client.gzip" / "data" / "items") {
+          path("gzip") {
             encodeResponseWith(Gzip) {
               complete(HttpEntity(ContentTypes.`application/json`, """[{"gzip":1},{"gzip":2}]"""))
             }
           } ~
-          path("client.bad" / "data" / "items") {
+          path("bad") {
             complete((StatusCodes.BadRequest, "bad request message"))
           } ~
-          path("client.badGzip" / "data" / "items") {
+          path("badGzip") {
             encodeResponseWith(Gzip) {
               complete((StatusCodes.BadRequest, "bad gzip request message"))
             }
           } ~
-          path("client.deflate" / "data" / "items") {
+          path("deflate") {
             encodeResponseWith(Deflate) {
               complete(HttpEntity(ContentTypes.`application/json`, """[{"gzip":1},{"gzip":2}]"""))
             }
           }
-      }
-    } ~
-      pathPrefix("insertTenant") {
-        post {
-          path("client.token" / "data" / "items") {
-            decodeRequestWith(Gzip) {
-              entity(as[String]) { body =>
-                headerValuePF(extractToken) { token =>
-                  if (body == """{"a":1}""" && token == "token") {
-                    complete(HttpEntity(ContentTypes.`application/json`, """{"totalDocuments" : 1, "inserted" : 1, "replaced" : 0}"""))
-                  } else {
-                    complete(StatusCodes.BadRequest)
-                  }
+      } ~ post {
+        path("token") {
+          decodeRequestWith(Gzip) {
+            entity(as[String]) { body =>
+              headerValuePF(extractToken) { token =>
+                if (body == """{"a":1}""" && token == "token") {
+                  complete(HttpEntity(ContentTypes.`application/json`, """{"totalDocuments" : 1, "inserted" : 1, "replaced" : 0}"""))
+                } else {
+                  complete(StatusCodes.BadRequest)
                 }
               }
             }
-          } ~
-            path("client.bad" / "data" / "items") {
-              complete((StatusCodes.BadRequest, "bad request message"))
-            }
-        }
+          }
+        } ~
+          path("bad") {
+            complete((StatusCodes.BadRequest, "bad request message"))
+          }
       }
+    }
 
-  var binding: ServerBinding = _
+  private var binding: ServerBinding = _
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
