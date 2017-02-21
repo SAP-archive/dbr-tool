@@ -42,7 +42,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
     val request = HttpRequest(
       uri = s"$documentServiceUrl/$tenant/$client",
-      headers = `Accept-Encoding`(identity) :: getHeaders(authorizationHeader, client, tenant))
+      headers = `Accept-Encoding`(identity) :: getHeaders(authorizationHeader, client))
 
     Http()
       .singleRequest(request)

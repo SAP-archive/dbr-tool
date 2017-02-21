@@ -16,7 +16,7 @@ import akka.http.scaladsl.model.headers.{Authorization, RawHeader}
 
 trait YaasHeaders {
 
-  def getHeaders(authorizationHeader: Option[Authorization], client: String, tenant: String): List[HttpHeader] = {
+  def getHeaders(authorizationHeader: Option[Authorization], client: String): List[HttpHeader] = {
     authorizationHeader match {
       case Some(authHeader) ⇒ authHeader :: Nil
       case None ⇒
