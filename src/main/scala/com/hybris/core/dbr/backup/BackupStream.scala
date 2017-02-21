@@ -51,11 +51,9 @@ trait BackupStream extends SLF4JLogging {
             .getTypes(ct.client, ct.tenant)
             .map(types => ct.copy(types = types))
 
-          result.onComplete {
-            case Success(elem) =>
-              val typesStr = elem.types.mkString(", ")
-              log.info(s"Types [$typesStr] for tenant '${elem.tenant}' received.")
-            case Failure(_) ⇒
+          result.foreach { elem =>
+            val typesStr = elem.types.mkString(", ")
+            log.info(s"Types [$typesStr] for tenant '${elem.tenant}' received.")
           }
 
           result
