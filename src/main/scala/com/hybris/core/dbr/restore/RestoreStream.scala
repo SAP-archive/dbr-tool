@@ -55,7 +55,12 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
             case t: Throwable => throw RestoreException(t.getMessage)
           }.map { ir ⇒
           if (ir.totalDocuments == documentsUploadChunk) {
-            log.info(s"\t - Restoring tenant '${rtc.tenant}' type '${rtc.`type`}' - ${ir.totalDocuments} documents, (${ir.inserted} inserted, ${ir.replaced} replaced).")
+            val msg = s"\t - Restoring tenant '${rtc.tenant}' type '${rtc.`type`}':" +
+                s" ${ir.totalDocuments} documents, " +
+                s"(${ir.inserted} inserted, " +
+                s"${ir.replaced} replaced)."
+
+            log.info(msg)
           }
           ir
         }
@@ -70,7 +75,9 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
         replaced = acc.replaced + t.replaced)
       )
       .map(ir ⇒ {
-        log.info(s"Restored tenant '${rtc.tenant}' type '${rtc.`type`}'. Total ${ir.totalDocuments} documents, (${ir.inserted} inserted, ${ir.replaced} replaced).")
+        val msg = s"Restored tenant '${rtc.tenant}' type '${rtc.`type`}'. " +
+          s"Total ${ir.totalDocuments} documents, (${ir.inserted} inserted, ${ir.replaced} replaced)."
+        log.info(msg)
         ir
       })
 

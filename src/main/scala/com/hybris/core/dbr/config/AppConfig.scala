@@ -22,12 +22,12 @@ trait AppConfig {
 
   private lazy val config = ConfigFactory.load()
 
-  lazy val appName = BuildInfo.name
-  lazy val appVersion = BuildInfo.version
+  lazy val appName: String = BuildInfo.name
+  lazy val appVersion: String = BuildInfo.version
 
-  lazy val environments = config.getList("environments.keys").unwrapped().asScala.toList
+  lazy val environments: List[AnyRef] = config.getList("environments.keys").unwrapped().asScala.toList
 
-  lazy val summaryFileName = config.getString("backup.summary-file-name")
+  lazy val summaryFileName: String = config.getString("backup.summary-file-name")
 
   def documentServiceUrl(env: String): String = config.getString(s"environments.$env.document-url")
 
@@ -35,14 +35,14 @@ trait AppConfig {
 
   def oauthUrl(env: String): String = config.getString(s"environments.$env.oauth-url")
 
-  val clientId = config.getString("api.client.id")
+  val clientId: String = config.getString("api.client.id")
 
-  val clientSecret = config.getString("api.client.secret")
+  val clientSecret: String = config.getString("api.client.secret")
 
-  val scopes = config.getStringList("api.scopes").asScala.toList
+  val scopes: List[String] = config.getStringList("api.scopes").asScala.toList
 
-  val readFileChunkSize = config.getInt("restore.read-file-chunk-size")
+  val readFileChunkSize: Int = config.getInt("restore.read-file-chunk-size")
 
-  val documentsUploadChunk = config.getInt("restore.no-documents-per-request")
+  val documentsUploadChunk: Int = config.getInt("restore.no-documents-per-request")
 
 }

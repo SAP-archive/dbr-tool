@@ -19,7 +19,7 @@ scalaVersion := "2.12.1"
 libraryDependencies ++= {
   object Versions {
     val akka = "2.4.17"
-    val akkaHttp = "10.0.3"
+    val akkaHttp = "10.0.4"
     val akkaHttpCirce = "1.12.0"
     val cats = "0.9.0"
     val circe = "0.7.0"

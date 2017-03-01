@@ -55,7 +55,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
     readBackupConfig(cliConfig.configFile)
       .flatMap { backupConfig =>
         prepareEmptyDir(cliConfig.backupDestinationDir)
-          .map(ready => backupConfig)
+          .map(_ => backupConfig)
           .leftMap(fileError => InternalAppError(fileError.getMessage))
       }
   }

@@ -63,9 +63,9 @@ object FileOps {
       dir.createDirectory()
       Right(Ready)
     } catch {
-      case e: AccessDeniedException =>
+      case _: AccessDeniedException =>
         Left(GenericFileError("Failed to prepare destination directory, access denied."))
-      case e: NoSuchFileException =>
+      case _: NoSuchFileException =>
         Left(GenericFileError("Failed to prepare destination directory, path doesn't exist."))
       case e: Throwable =>
         Left(GenericFileError(s"Failed to prepare destination directory, error: ${e.getMessage}."))
