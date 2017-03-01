@@ -19,8 +19,8 @@ To build a distribution zip use command:
 $ sbt clean test dist
 ```
 
-The Distribution zip will be created in `artifact` folder. 
+The distribution zip will be created in `artifact` directory. 
 
 ## Usage
 
-Check USER_GUIDE.md for details
+Check USER_GUIDE.md for the details.

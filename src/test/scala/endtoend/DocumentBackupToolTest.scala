@@ -89,7 +89,7 @@ class DocumentBackupToolTest extends BaseCoreTest {
       Thread.sleep(5000)
 
       // Restore to eu
-      Main.main(Array("restore", "--env=eu", "--client=framefrog.mycomicsshop", s"--dir=$testDir"))
+      Main.main(Array("restore", "--env=eu", s"--dir=$testDir"))
       Thread.sleep(5000)
 
       // Verify the document in EU

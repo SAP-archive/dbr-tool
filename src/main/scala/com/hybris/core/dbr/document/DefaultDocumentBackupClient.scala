@@ -62,7 +62,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
       }
       .recoverWith {
         case _: StreamTcpException ⇒
-          Future.failed(DocumentServiceClientException(s"TCP error during getting documents from the Document service."))
+          Future.failed(DocumentServiceClientException(s"TCP error during getting documents from the Document Backup."))
 
         case clientException: DocumentBackupClientException ⇒
           Future.failed(clientException)

@@ -19,22 +19,17 @@ trait Cli extends AppConfig {
   private val allEnvironments = environments.mkString(", ")
 
   private val parser = new scopt.OptionParser[CliConfig](appName) {
-    head(appName, appVersion, "- Document service backup/restore tool")
+    head(appName, appVersion, "- Document Service Backup/Restore Tool")
 
     opt[String]("env")
       .action((env, cfg) => cfg.copy(env = env))
-      .text(s"environment, available options: $allEnvironments")
+      .text(s"Environment, available options: [$allEnvironments].")
       .required()
       .validate { env =>
-        if (environments.contains(env) || env == "local") success else failure(s"unknown environment '$env'")
+        if (environments.contains(env) || env == "local") success else failure(s"Unknown environment '$env'.")
       }
 
-    opt[String]("client")
-      .action((cl, cfg) => cfg.copy(client = cl))
-      .text("hybris client")
-      .required()
-
-    help("help").text("prints this usage text")
+    help("help").text("Prints this usage text.")
 
     note("")
 
@@ -43,11 +38,15 @@ trait Cli extends AppConfig {
       .children(
         opt[String]("config")
           .action((cf, cfg) => cfg.copy(configFile = cf))
-          .text("path to configuration file for backup")
+          .text("Path to backup configuration file.")
           .required(),
         opt[String]("out")
           .action((dstDir, cfg) => cfg.copy(backupDestinationDir = dstDir))
-          .text("destination folder")
+          .text("Destination directory.")
+          .required(),
+        opt[String]("client")
+          .action((cl, cfg) => cfg.copy(client = cl))
+          .text("YaaS client.")
           .required()
       )
 
@@ -58,7 +57,7 @@ trait Cli extends AppConfig {
       .children(
         opt[String]("dir")
           .action((srcDir, cfg) => cfg.copy(restoreSourceDir = srcDir))
-          .text("directory with backup files")
+          .text("Directory with backup files.")
           .required()
       )
   }

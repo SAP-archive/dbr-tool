@@ -1,9 +1,9 @@
 # Document Service Backup Restore Tool
 
-Document service backup and restore tool, or simply `dbr`, allows to backup data from Document service 
-and restore data to Document service. The backup operation reads your documents from the Document service
+Document Service Backup/Restore Tool, or simply `dbr`, allows to backup data from the Document Service 
+and restore data to the Document service. Backup operation reads your documents from the Document service
 using the Document Backup service and writes them as extended JSONs to files in a designated directory. 
-This directory can be later used for restoration.
+This directory can be later used for restore process.
   
 Both operations have an option to choose an environment. `dbr` supports all available environments 
 (__us-prod__, __us-stage__, __eu__). With this, it is possible to migrate data from one environment to another.
@@ -29,7 +29,7 @@ In case you get `permission denied: bin/dbr`, just `chmod +x bin/dbr`.
 
 ### Backup
 
-The backup reads documents from the Document Backup service and stores them in files on the local file system. 
+The backup reads documents from the Document Backup service and stores them in files on the local file system.
 
 ``` bash
 $ bin/dbr backup --env <env> --client <client> --config <config_file> --out <destination_dir>
@@ -39,8 +39,8 @@ Parameters:
  
 -	`env` - Name of an environment, possible values: us-prod, us-stage, eu.
 -	`client` - Name of the client for whom the operation is performed.
--	`config_file` - File you have to create manually before the backup. It contains configuration where tenants and types are listed. For more information on the structure of config file, see the next section.
--	`destination_dir` - Destination folder where output files will be stored.
+-	`config` - File you have to create manually before the backup. It contains configuration where tenants and types are listed. For more information on the structure of config file, see the next section.
+-	`out` - Destination directory where output files will be stored.
 
 Backup requires `CLIENT_ID` and `CLIENT_SECRET` environment variable to be set with appropriate auth credentials for getting access token.
 
@@ -86,14 +86,13 @@ If you want to restore only a part of the data (e.g. some selected types), you c
 More information on the `backup.json` file can be found in the Configuration section.
 
 ``` bash
-$ bin/dbr restore --env <env> --client <client> --dir <source_dir>
+$ bin/dbr restore --env <env> --dir <source_dir>
 ```
 
 Parameters: 
  
 -	`env` - Name of an environment, possible values: us-prod, us-stage, eu.
--	`client` - Name of the client for whom the operation is performed.
--	`source_dir` - Source directory with files containing data. 
+-	`dir` - Source directory with files containing the data. 
 
 Restore requires `CLIENT_ID` and `CLIENT_SECRET` environment variable to be set with appropriate auth credentials for getting access token.
 
@@ -103,12 +102,12 @@ Example:
 $ export CLIENT_ID=<setme>
 $ export CLIENT_SECRET=<setme>
 
-$ bin/dbr restore --env us-prod --client hybris.product --dir tmp/hybris_product_backup
+$ bin/dbr restore --env us-prod --dir tmp/hybris_product_backup
 ```
 
 #### Configuration
 
-The configuration for restoration contains a list of types to be imported into the Document Backup. 
+The configuration for restore process contains a list of types to be imported into the Document Backup. 
 Each type's configuration holds an information about a client, tenant, type name and file name where the documents are stored.
 You can manipulate this file in order to selectively restore selected types.
 
