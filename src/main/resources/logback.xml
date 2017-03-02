@@ -11,7 +11,7 @@
 
 	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
-			<pattern>[%date{HH:mm:ss}] %black(%m) %n</pattern>
+			<pattern>%date{HH:mm:ss} %m %n</pattern>
 		</encoder>
 	</appender>
 

@@ -21,10 +21,9 @@ trait YaasHeaders {
       case Some(authHeader) ⇒ authHeader :: Nil
       case None ⇒
         val owner = getClientOwner(client)
-        RawHeader("hybris-client", client) :: RawHeader("hybris-tenant", owner) :: RawHeader("hybris-client-owner", owner) :: Nil
+        RawHeader("hybris-client", client) :: RawHeader("hybris-tenant", owner) :: RawHeader("hybris-client-owner", owner) :: RawHeader("User-Agent", "dbr-0.2.1") :: Nil
     }
   }
 
   private def getClientOwner(yaasClient: String) = yaasClient.split('.')(0)
-
 }
