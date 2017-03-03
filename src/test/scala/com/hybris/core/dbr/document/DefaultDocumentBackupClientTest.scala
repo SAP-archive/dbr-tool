@@ -21,6 +21,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.hybris.core.dbr.BaseCoreTest
+import com.hybris.core.dbr.config.BuildInfo
 import com.hybris.core.dbr.exceptions.DocumentBackupClientException
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -41,7 +42,16 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
 
     "get documents" in {
 
-      val stream = client.getDocuments("client", "tenant", "token").futureValue
+      val stream = client.getDocuments("client", "tenant", "type").futureValue
+
+      val result = stream.map(_.utf8String).runFold("")(_ + _).futureValue
+
+      result mustBe """[{"doc":1},{"doc":2}]"""
+    }
+
+    "get documents with User-Agent header" in {
+
+      val stream = client.getDocuments("client", "tenant", "useragent").futureValue
 
       val result = stream.map(_.utf8String).runFold("")(_ + _).futureValue
 
@@ -115,15 +125,26 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
   private val route =
     pathPrefix("data" / "tenant") {
       get {
-        path("token") {
+        path("type") {
           headerValuePF(extractToken) { token =>
             if (token == "token") {
               complete(HttpEntity(ContentTypes.`application/json`, """[{"doc":1},{"doc":2}]"""))
             } else {
-              complete(StatusCodes.BadRequest)
+              complete(StatusCodes.BadRequest → s"Token in request: '${token}'. Expected: 'token'.")
             }
+
           }
         } ~
+          path("useragent") {
+            headerValueByName("User-Agent") { userAgent =>
+              if (userAgent == s"${BuildInfo.name}-${BuildInfo.version}") {
+                complete(HttpEntity(ContentTypes.`application/json`, """[{"doc":1},{"doc":2}]"""))
+              }
+              else {
+                complete(StatusCodes.BadRequest → s"User-Agent in request: '${userAgent}'. Expected: ${BuildInfo.name}-${BuildInfo.version}.")
+              }
+            }
+          } ~
           path("gzip") {
             encodeResponseWith(Gzip) {
               complete(HttpEntity(ContentTypes.`application/json`, """[{"gzip":1},{"gzip":2}]"""))

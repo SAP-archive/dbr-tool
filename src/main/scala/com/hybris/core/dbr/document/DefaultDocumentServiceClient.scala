@@ -15,9 +15,10 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.HttpEncodings.identity
-import akka.http.scaladsl.model.headers._
+import akka.http.scaladsl.model.headers.{`User-Agent`, _}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.{Materializer, StreamTcpException}
+import com.hybris.core.dbr.config.BuildInfo
 import com.hybris.core.dbr.exceptions.DocumentServiceClientException
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.Decoder
@@ -42,7 +43,9 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
     val request = HttpRequest(
       uri = s"$documentServiceUrl/$tenant/$client",
-      headers = `Accept-Encoding`(identity) :: getHeaders(authorizationHeader, client))
+      headers = `Accept-Encoding`(identity) ::
+      `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
+       getHeaders(authorizationHeader, client))
 
     Http()
       .singleRequest(request)

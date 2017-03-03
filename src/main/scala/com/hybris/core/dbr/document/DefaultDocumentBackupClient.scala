@@ -20,6 +20,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Compression, Source}
 import akka.stream.{Materializer, StreamTcpException}
 import akka.util.ByteString
+import com.hybris.core.dbr.config.BuildInfo
 import com.hybris.core.dbr.exceptions.{DocumentBackupClientException, DocumentServiceClientException}
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.Decoder
@@ -46,7 +47,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
 
     val request = HttpRequest(
       uri = s"$documentBackupUrl/data/$tenant/${`type`}",
-      headers = `Accept-Encoding`(gzip) :: getHeaders(authorizationHeader, client))
+      headers = `Accept-Encoding`(gzip) :: `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") :: getHeaders(authorizationHeader, client))
 
     Http()
       .singleRequest(request)

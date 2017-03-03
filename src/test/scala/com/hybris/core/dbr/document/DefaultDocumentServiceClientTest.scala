@@ -18,6 +18,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, StatusCod
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import com.hybris.core.dbr.BaseCoreTest
+import com.hybris.core.dbr.config.BuildInfo
 import com.hybris.core.dbr.exceptions.DocumentServiceClientException
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -39,6 +40,13 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
     "get types" in {
 
       val types = client.getTypes("client.token", "typesTenant").futureValue
+
+      types must contain theSameElementsAs List("type1", "type2")
+    }
+
+    "get types with User-Agent header" in {
+
+      val types = client.getTypes("client.useragent", "typesTenant").futureValue
 
       types must contain theSameElementsAs List("type1", "type2")
     }
@@ -97,6 +105,16 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
                   case _ ⇒
                     complete(StatusCodes.BadRequest)
                 }
+              }
+            }
+          } ~
+          path("client.useragent") {
+            headerValueByName("User-Agent") { userAgent =>
+              if (userAgent == s"${BuildInfo.name}-${BuildInfo.version}") {
+                complete(HttpEntity(ContentTypes.`application/json`, """{"types" : ["type1", "type2"]}"""))
+              }
+              else {
+                complete(StatusCodes.BadRequest → s"User-Agent in request: '${userAgent}'. Expected: ${BuildInfo.name}-${BuildInfo.version}.")
               }
             }
           } ~

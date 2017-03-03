@@ -17,11 +17,16 @@ import akka.http.scaladsl.model.headers.{Authorization, RawHeader}
 trait YaasHeaders {
 
   def getHeaders(authorizationHeader: Option[Authorization], client: String): List[HttpHeader] = {
+
     authorizationHeader match {
-      case Some(authHeader) ⇒ authHeader :: Nil
+      case Some(authHeader) ⇒
+        authHeader :: Nil
       case None ⇒
         val owner = getClientOwner(client)
-        RawHeader("hybris-client", client) :: RawHeader("hybris-tenant", owner) :: RawHeader("hybris-client-owner", owner) :: RawHeader("User-Agent", "dbr-0.2.1") :: Nil
+        RawHeader("hybris-client", client) ::
+          RawHeader("hybris-tenant", owner) ::
+          RawHeader("hybris-client-owner", owner) ::
+          Nil
     }
   }
 
