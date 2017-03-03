@@ -54,16 +54,16 @@ class DocumentBackupToolTest extends BaseCoreTest {
 
       // Insert a document
       val document =
-      """{
-        |	"i": 1,
-        |	"f": 1.2,
-        |	"a": [1, 2, 3],
-        |	"s": "Hello World!",
-        |	"n": {
-        |		"s": "Hello World!"
-        |	},
-        |	"b": true
-        |}""".stripMargin
+        """{
+          |	"i": 1,
+          |	"f": 1.2,
+          |	"a": [1, 2, 3],
+          |	"s": "Hello World!",
+          |	"n": {
+          |		"s": "Hello World!"
+          |	},
+          |	"b": true
+          |}""".stripMargin
 
       val usDocumentId = insertDocument("https://api.us.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`, document).futureValue
 
@@ -89,7 +89,8 @@ class DocumentBackupToolTest extends BaseCoreTest {
       Thread.sleep(5000)
 
       // Restore to eu
-      Main.main(Array("restore", "--env=eu", s"--dir=$testDir"))
+      val backupTimestampDir = testDir.list.toList.head
+      Main.main(Array("restore", "--env=eu", s"--dir=${backupTimestampDir}"))
       Thread.sleep(5000)
 
       // Verify the document in EU
