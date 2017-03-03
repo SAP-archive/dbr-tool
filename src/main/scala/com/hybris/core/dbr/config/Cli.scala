@@ -19,7 +19,6 @@ trait Cli extends AppConfig {
   private val allEnvironments = environments.mkString(", ")
 
   private val parser = new scopt.OptionParser[CliConfig](appName) {
-    val timestamp: Long = System.currentTimeMillis / 1000
     head(appName, appVersion, "- Document Service Backup/Restore Tool")
 
     opt[String]("env")
@@ -42,7 +41,7 @@ trait Cli extends AppConfig {
           .text("Path to backup configuration file.")
           .required(),
         opt[String]("out")
-          .action((dstDir, cfg) => cfg.copy(backupDestinationDir = dstDir + s"/backup-${timestamp}"))
+          .action((dstDir, cfg) => cfg.copy(backupDestinationDir = dstDir))
           .text("Destination directory.")
           .required(),
         opt[String]("client")

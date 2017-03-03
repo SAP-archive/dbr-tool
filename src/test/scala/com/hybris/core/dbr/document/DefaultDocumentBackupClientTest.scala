@@ -97,6 +97,13 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
       result mustBe InsertResult(1, 1, 0)
     }
 
+    "insert raw document with User-Agent header" in {
+
+      val result = client.insertDocuments("client", "tenant", "useragent", Source.single(ByteString( """{"a":1}"""))).futureValue
+
+      result mustBe InsertResult(1, 1, 0)
+    }
+
     "handle bad response when inserting raw document" in {
 
       val result = client.insertDocuments("client", "tenant", "bad", Source.single(ByteString( """{"a":1}"""))).failed.futureValue
@@ -177,6 +184,16 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
             }
           }
         } ~
+          path("useragent") {
+            headerValueByName("User-Agent") { userAgent =>
+              if (userAgent == s"${BuildInfo.name}-${BuildInfo.version}") {
+                complete(HttpEntity(ContentTypes.`application/json`, """{"totalDocuments" : 1, "inserted" : 1, "replaced" : 0}"""))
+              }
+              else {
+                complete(StatusCodes.BadRequest → s"User-Agent in request: '$userAgent'. Expected: ${BuildInfo.name}-${BuildInfo.version}.")
+              }
+            }
+          } ~
           path("bad") {
             complete((StatusCodes.BadRequest, "bad request message"))
           }

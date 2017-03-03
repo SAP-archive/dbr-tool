@@ -13,11 +13,9 @@ package com.hybris.core.dbr
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import cats.implicits._
 import com.hybris.core.dbr.backup.BackupService
 import com.hybris.core.dbr.config._
 import com.hybris.core.dbr.document.{DefaultDocumentBackupClient, DefaultDocumentServiceClient}
-import com.hybris.core.dbr.file.FileOps._
 import com.hybris.core.dbr.model.{ClientTenant, InternalAppError}
 import com.hybris.core.dbr.oauth.OAuthClient
 import com.hybris.core.dbr.restore.RestoreService
@@ -42,22 +40,13 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
   }
 
   private def runBackup(cliConfig: CliConfig) = {
-    prepareBackup(cliConfig) match {
+    readBackupConfig(cliConfig.configFile) match {
       case Right(backupConfig) =>
         doBackup(cliConfig, backupConfig)
 
       case Left(error) =>
         logger.error(error.message)
     }
-  }
-
-  private def prepareBackup(cliConfig: CliConfig): Either[InternalAppError, BackupConfig] = {
-    readBackupConfig(cliConfig.configFile)
-      .flatMap { backupConfig =>
-        prepareEmptyDir(cliConfig.backupDestinationDir)
-          .map(_ => backupConfig)
-          .leftMap(fileError => InternalAppError(fileError.getMessage))
-      }
   }
 
   private def doBackup(cliConfig: CliConfig, backupConfig: BackupConfig): Unit = {
@@ -77,7 +66,9 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
         val documentBackupClient = new DefaultDocumentBackupClient(documentBackupUrl(cliConfig.env), token)
         val documentServiceClient = new DefaultDocumentServiceClient(documentServiceUrl(cliConfig.env), token)
 
-        val backupJob = new BackupService(documentBackupClient, documentServiceClient, cliConfig.backupDestinationDir, summaryFileName)
+        val timestamp = System.currentTimeMillis / 1000
+        val backupDestinationDir = s"${cliConfig.backupDestinationDir}/backup-${timestamp}"
+        val backupJob = new BackupService(documentBackupClient, documentServiceClient, backupDestinationDir, summaryFileName)
 
         val cts = backupConfig.tenants.map(t => ClientTenant(cliConfig.client, t.tenant, t.types.getOrElse(List())))
 

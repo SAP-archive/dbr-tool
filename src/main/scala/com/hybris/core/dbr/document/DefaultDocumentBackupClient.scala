@@ -80,7 +80,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
     val request = HttpRequest(method = HttpMethods.POST,
       uri = s"$documentBackupUrl/data/$tenant/${`type`}",
       entity = HttpEntity(ContentTypes.`application/json`, data = compressedDocuments),
-      headers = `Content-Encoding`(gzip) :: getHeaders(authorizationHeader, client))
+      headers = `Content-Encoding`(gzip) :: `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") :: getHeaders(authorizationHeader, client))
 
     Http()
       .singleRequest(request)

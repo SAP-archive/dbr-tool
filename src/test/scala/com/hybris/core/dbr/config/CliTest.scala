@@ -18,10 +18,9 @@ class CliTest extends BaseTest with Cli {
   "Cli" should {
 
     "read cli config for backup" in {
-      val timestamp: Long = System.currentTimeMillis / 1000
       val args = Array("backup", "--env", "us-prod", "--client", "hybris.space", "--config", "space.json", "--out", s"/nasa/moon")
 
-      readCliConfig(args).value mustBe CliConfig("backup", "us-prod", "hybris.space", "space.json", s"/nasa/moon/backup-${timestamp}", "")
+      readCliConfig(args).value mustBe CliConfig("backup", "us-prod", "hybris.space", "space.json", s"/nasa/moon", "")
     }
 
     "read cli config for restore" in {
