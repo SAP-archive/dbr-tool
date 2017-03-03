@@ -11,6 +11,8 @@
  */
 package com.hybris.core.dbr.file
 
+import java.time.Instant
+
 import better.files.File
 import com.hybris.core.dbr.BaseTest
 import com.hybris.core.dbr.file.FileOps._
@@ -24,6 +26,78 @@ class FileOpsTest extends BaseTest {
   private implicit val testPersonDecoder: Decoder[TestPerson] = deriveDecoder
 
   "FileOps" when {
+
+    "preparing empty directory" should {
+
+      "create empty directory when it doesn't exist" in {
+        // given
+        val path = s"${File.temp.pathAsString}/$randomName"
+
+        // when
+        val result = prepareEmptyDir(path)
+
+        // then
+        result mustBe Right(Ready)
+
+        val resultDir = File(path)
+        resultDir.exists mustBe true
+        resultDir.isEmpty mustBe true
+      }
+
+      "accept directory when it exists and it's empty" in {
+        // given
+        val tmpDir = File.newTemporaryDirectory()
+
+        // when
+        val result = prepareEmptyDir(tmpDir.pathAsString)
+
+        // then
+        result mustBe Right(Ready)
+
+        tmpDir.exists mustBe true
+        tmpDir.isEmpty mustBe true
+      }
+
+      "not clear directory when it exists and it's not empty" in {
+        // given
+        val tmpDir = File.newTemporaryDirectory()
+        File(s"${tmpDir.pathAsString}/$randomName").touch(Instant.now())
+
+        // when
+        val result = prepareEmptyDir(tmpDir.pathAsString)
+
+        // then
+        result mustBe Right(Ready)
+
+        tmpDir.exists mustBe true
+        tmpDir.isEmpty mustBe false
+      }
+
+      "fail to create empty dir when path doesn't exist" in {
+        // given
+        val path = s"/${File.temp.pathAsString}/$randomName/$randomName"
+
+        // when
+        val result = prepareEmptyDir(path).left.value
+
+        // then
+        result mustBe a[GenericFileError]
+      }
+
+      "fail to create empty dir when path leads to file" in {
+        val path = s"/${File.temp.pathAsString}/$randomName"
+        File(path).touch(Instant.now())
+
+        // when
+        val result = prepareEmptyDir(path).left.value
+
+        // then
+        result mustBe a[GenericFileError]
+
+        // clean up
+        cleanUp(path)
+      }
+    }
 
     "reading type from file" should {
 
@@ -75,4 +149,7 @@ class FileOpsTest extends BaseTest {
       }
     }
   }
+
+  private def cleanUp(path: String) = File(path).delete()
+
 }

@@ -16,6 +16,7 @@ import akka.stream.ActorMaterializer
 import com.hybris.core.dbr.backup.BackupService
 import com.hybris.core.dbr.config._
 import com.hybris.core.dbr.document.{DefaultDocumentBackupClient, DefaultDocumentServiceClient}
+import com.hybris.core.dbr.file.FileOps
 import com.hybris.core.dbr.model.{ClientTenant, InternalAppError}
 import com.hybris.core.dbr.oauth.OAuthClient
 import com.hybris.core.dbr.restore.RestoreService
@@ -25,8 +26,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 /**
- * Main class of backup tool.
- */
+  * Main class of backup tool.
+  */
 object Main extends App with Cli with FileConfig with AppConfig with LazyLogging {
 
   private def run(): Unit = {
@@ -67,7 +68,9 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
         val documentServiceClient = new DefaultDocumentServiceClient(documentServiceUrl(cliConfig.env), token)
 
         val timestamp = System.currentTimeMillis / 1000
+
         val backupDestinationDir = s"${cliConfig.backupDestinationDir}/backup-${timestamp}"
+        FileOps.prepareEmptyDir(backupDestinationDir)
         val backupJob = new BackupService(documentBackupClient, documentServiceClient, backupDestinationDir, summaryFileName)
 
         val cts = backupConfig.tenants.map(t => ClientTenant(cliConfig.client, t.tenant, t.types.getOrElse(List())))

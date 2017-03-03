@@ -27,13 +27,14 @@ class DocumentBackupToolTest extends BaseCoreTest {
 
   val `type` = "dbrTest"
 
-  "Document Backup Restore tool" should {
+  /**
+    * This is a suite of end-to-end tests.
+    * In order to run it, export CLIENT_ID and CLIENT_SECRET for framefrog.mycomicsshop at first.
+    * Please keep this test ignored.
+    */
+  "Document Backup Restore tool" ignore {
 
-    /**
-      * This is an end-to-end test. In order to run it, export CLIENT_ID and CLIENT_SECRET for framefrog.mycomicsshop at first.
-      * Please keep this test ignored.
-      */
-    "backup data from US and restore in EU" ignore {
+    "backup data from US and restore in EU" in {
 
       import DocumentServiceClient._
 
@@ -69,6 +70,7 @@ class DocumentBackupToolTest extends BaseCoreTest {
 
       // Prepare config file
       val testDir = File.newTemporaryDirectory()
+      val backupDir = testDir / "backup"
       val configFileName = randomName
 
       testDir / configFileName overwrite
@@ -84,14 +86,16 @@ class DocumentBackupToolTest extends BaseCoreTest {
            |
         """.stripMargin
 
+      backupDir createDirectory
+
       // Backup from us-prod
-      Main.main(Array("backup", "--env=us-prod", "--client=framefrog.mycomicsshop", s"--out=$testDir", s"--config=${testDir / configFileName}"))
-      Thread.sleep(5000)
+      Main.main(Array("backup", "--env=us-prod", "--client=framefrog.mycomicsshop", s"--out=$backupDir", s"--config=${testDir / configFileName}"))
+      Thread.sleep(3000)
 
       // Restore to eu
-      val backupTimestampDir = testDir.list.toList.head
+      val backupTimestampDir = backupDir.list.toList.head
       Main.main(Array("restore", "--env=eu", s"--dir=$backupTimestampDir"))
-      Thread.sleep(5000)
+      Thread.sleep(3000)
 
       // Verify the document in EU
       val documentFromEu = getDocument("https://api.eu.yaas.io/hybris/document/v1", euToken, "framefrog", "framefrog.mycomicsshop", `type`, usDocumentId).futureValue
@@ -101,6 +105,69 @@ class DocumentBackupToolTest extends BaseCoreTest {
       // Cleanup
       deleteType("https://api.us.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`).futureValue
       deleteType("https://api.eu.yaas.io/hybris/document/v1", euToken, "framefrog", "framefrog.mycomicsshop", `type`).futureValue
+    }
+
+    "create new dir with timestamp for backup" in {
+      // given
+      val testDir = File.newTemporaryDirectory()
+      val backupDir = testDir / "backup"
+
+      val configFileName = randomName
+
+      testDir / configFileName overwrite
+        s"""
+           |{
+           |  "tenants" : [
+           |    {
+           |      "tenant" : "framefrog",
+           |      "types" : ["${`type`}"]
+           |    }
+           |  ]
+           |}
+           |
+        """.stripMargin
+
+      backupDir createDirectory
+
+      // when
+      Main.main(Array("backup", "--env=us-prod", "--client=framefrog.mycomicsshop", s"--out=$backupDir", s"--config=${testDir / configFileName}"))
+      Thread.sleep(1000)
+
+      // then
+      val backupDirFiles = backupDir.list.toList
+      backupDirFiles.size mustBe 1
+      backupDirFiles.head.name must startWith ("backup-")
+    }
+
+    "not clear backup directory" in {
+      // given
+      val testDir = File.newTemporaryDirectory()
+      val backupDir = testDir / "backup"
+      val configFileName = randomName
+
+      testDir / configFileName overwrite
+        s"""
+           |{
+           |  "tenants" : [
+           |    {
+           |      "tenant" : "framefrog",
+           |      "types" : ["${`type`}"]
+           |    }
+           |  ]
+           |}
+           |
+        """.stripMargin
+
+      backupDir createDirectory
+
+      backupDir / "myFile.txt" overwrite "My file!"
+
+      // when
+      Main.main(Array("backup", "--env=us-prod", "--client=framefrog.mycomicsshop", s"--out=$backupDir", s"--config=${testDir / configFileName}"))
+      Thread.sleep(10)
+
+      // then
+      (backupDir / "myFile.txt" exists) mustBe true
     }
   }
 }

@@ -11,6 +11,8 @@
 */
 package com.hybris.core.dbr.file
 
+import java.nio.file.{AccessDeniedException, NoSuchFileException}
+
 import better.files.File
 import cats.implicits._
 import io.circe.Decoder
@@ -29,6 +31,45 @@ object FileOps {
   case class FileNotFoundError(path: String) extends FileError(s"File $path not found")
 
   case class FileParsingError(message: String) extends FileError(message)
+
+  /**
+    * Prepares empty directory.
+    *
+    * @param path path to directory
+    * @return
+    */
+  def prepareEmptyDir(path: String): Either[FileError, Ready.type] = {
+    val dstDir = File(path)
+
+    try {
+      if (dstDir.exists && dstDir.isDirectory) {
+        Right(Ready)
+      } else if (dstDir.exists && dstDir.isRegularFile) {
+        Left(GenericFileError("Destination directory is a file."))
+      } else if (dstDir.notExists) {
+        createDirectory(dstDir)
+      } else {
+        Left(GenericFileError("Failed to prepare destination directory."))
+      }
+    } catch {
+      case e: Exception =>
+        Left(GenericFileError(s"Failed to prepare destination directory, error: ${e.getMessage}"))
+    }
+  }
+
+  private def createDirectory(dir: File): Either[FileError, Ready.type] = {
+    try {
+      dir.createDirectory()
+      Right(Ready)
+    } catch {
+      case _: AccessDeniedException =>
+        Left(GenericFileError("Failed to prepare destination directory, access denied."))
+      case _: NoSuchFileException =>
+        Left(GenericFileError("Failed to prepare destination directory, path doesn't exist."))
+      case e: Throwable =>
+        Left(GenericFileError(s"Failed to prepare destination directory, error: ${e.getMessage}."))
+    }
+  }
 
   /**
    * Reads content from file and decodes it to given type.
