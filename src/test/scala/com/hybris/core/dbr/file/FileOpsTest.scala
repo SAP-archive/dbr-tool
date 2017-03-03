@@ -73,17 +73,6 @@ class FileOpsTest extends BaseTest {
         tmpDir.isEmpty mustBe false
       }
 
-      "fail to create empty dir when path doesn't exist" in {
-        // given
-        val path = s"/${File.temp.pathAsString}/$randomName/$randomName"
-
-        // when
-        val result = prepareEmptyDir(path).left.value
-
-        // then
-        result mustBe a[GenericFileError]
-      }
-
       "fail to create empty dir when path leads to file" in {
         val path = s"/${File.temp.pathAsString}/$randomName"
         File(path).touch(Instant.now())

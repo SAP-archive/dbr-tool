@@ -40,7 +40,7 @@ Parameters:
 -	`env` - Name of an environment, possible values: us-prod, us-stage, eu.
 -	`client` - Name of the client for whom the operation is performed.
 -	`config` - File you have to create manually before the backup. It contains configuration where tenants and types are listed. For more information on the structure of config file, see the next section.
--	`out` - Destination directory where output files will be stored.
+-	`out` - Destination directory where output files will be stored. Every backup operation creates a new directory in `out` directory with the following naming convention: `backup-TIMESTAMP`.
 
 Backup requires `CLIENT_ID` and `CLIENT_SECRET` environment variable to be set with appropriate auth credentials for getting access token.
 
@@ -102,7 +102,7 @@ Example:
 $ export CLIENT_ID=<setme>
 $ export CLIENT_SECRET=<setme>
 
-$ bin/dbr restore --env us-prod --dir tmp/hybris_product_backup
+$ bin/dbr restore --env us-prod --dir tmp/hybris_product_backup/backup-1488551648
 ```
 
 #### Configuration

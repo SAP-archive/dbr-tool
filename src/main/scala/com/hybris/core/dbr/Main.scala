@@ -69,7 +69,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
         val timestamp = System.currentTimeMillis / 1000
 
-        val backupDestinationDir = s"${cliConfig.backupDestinationDir}/backup-${timestamp}"
+        val backupDestinationDir = s"${cliConfig.backupDestinationDir}/backup-$timestamp"
         FileOps.prepareEmptyDir(backupDestinationDir)
         val backupJob = new BackupService(documentBackupClient, documentServiceClient, backupDestinationDir, summaryFileName)
 
