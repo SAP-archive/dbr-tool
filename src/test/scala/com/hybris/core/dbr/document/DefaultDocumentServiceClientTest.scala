@@ -114,7 +114,7 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
                 complete(HttpEntity(ContentTypes.`application/json`, """{"types" : ["type1", "type2"]}"""))
               }
               else {
-                complete(StatusCodes.BadRequest → s"User-Agent in request: '${userAgent}'. Expected: ${BuildInfo.name}-${BuildInfo.version}.")
+                complete(StatusCodes.BadRequest → s"User-Agent in request: '$userAgent'. Expected: ${BuildInfo.name}-${BuildInfo.version}.")
               }
             }
           } ~

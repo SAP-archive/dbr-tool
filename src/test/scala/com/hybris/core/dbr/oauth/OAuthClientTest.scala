@@ -54,7 +54,7 @@ class OAuthClientTest extends BaseCoreTest {
           |  "scope": "hybris.tenant=framefrog"
           |}""".stripMargin))
 
-    case r: HttpRequest =>
+    case _: HttpRequest =>
       HttpResponse(StatusCodes.NotFound, entity = "Unknown resource!")
   }
 

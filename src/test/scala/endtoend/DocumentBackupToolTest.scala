@@ -90,7 +90,7 @@ class DocumentBackupToolTest extends BaseCoreTest {
 
       // Restore to eu
       val backupTimestampDir = testDir.list.toList.head
-      Main.main(Array("restore", "--env=eu", s"--dir=${backupTimestampDir}"))
+      Main.main(Array("restore", "--env=eu", s"--dir=$backupTimestampDir"))
       Thread.sleep(5000)
 
       // Verify the document in EU

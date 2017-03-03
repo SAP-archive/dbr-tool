@@ -130,7 +130,7 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
             if (token == "token") {
               complete(HttpEntity(ContentTypes.`application/json`, """[{"doc":1},{"doc":2}]"""))
             } else {
-              complete(StatusCodes.BadRequest → s"Token in request: '${token}'. Expected: 'token'.")
+              complete(StatusCodes.BadRequest → s"Token in request: '$token'. Expected: 'token'.")
             }
 
           }
@@ -141,7 +141,7 @@ class DefaultDocumentBackupClientTest extends BaseCoreTest {
                 complete(HttpEntity(ContentTypes.`application/json`, """[{"doc":1},{"doc":2}]"""))
               }
               else {
-                complete(StatusCodes.BadRequest → s"User-Agent in request: '${userAgent}'. Expected: ${BuildInfo.name}-${BuildInfo.version}.")
+                complete(StatusCodes.BadRequest → s"User-Agent in request: '$userAgent'. Expected: ${BuildInfo.name}-${BuildInfo.version}.")
               }
             }
           } ~
