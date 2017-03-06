@@ -36,6 +36,8 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
       case Some(cliConfig) if cliConfig.isRestore => runRestore(cliConfig)
 
+      case Some(cliConfig) ⇒  logger.error("Error parsing arguments. Try --help for more information.")
+
       case None => // ignore and stop
     }
   }
