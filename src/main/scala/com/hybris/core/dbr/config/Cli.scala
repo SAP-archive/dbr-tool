@@ -19,6 +19,9 @@ trait Cli extends AppConfig {
   private val allEnvironments = environments.mkString(", ")
 
   private val parser = new scopt.OptionParser[CliConfig](appName) {
+    
+    override def showUsageOnError = true
+
     head(appName, appVersion, "- Document Service Backup/Restore Tool")
 
     opt[String]("env")
