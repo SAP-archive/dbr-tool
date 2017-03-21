@@ -19,9 +19,10 @@ import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
-import com.hybris.core.dbr.config.RestoreTypeConfig
+import com.hybris.core.dbr.config.RestoreTypeDefinition
 import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
+import io.circe.Json
 
 import scala.concurrent.{Await, Future}
 
@@ -46,8 +47,9 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
           |]
         """.stripMargin
 
+      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
       val stream =
-        configToFileChunksSource(testDir.pathAsString, RestoreTypeConfig("client", "tenant1", "type1", fileName))
+        configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
           .run()
 
@@ -80,8 +82,9 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
            |]
             """.stripMargin
 
+      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
       val stream =
-        configToFileChunksSource(testDir.pathAsString, RestoreTypeConfig("client", "tenant1", "type1", fileName1))
+        configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName1, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
           .run()
 
@@ -98,8 +101,9 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       val testDir = File.newTemporaryDirectory()
       val fileName = randomName
 
+      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
       val stream =
-        configToFileChunksSource(testDir.pathAsString, RestoreTypeConfig("client", "tenant1", "type1", fileName))
+        configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
           .run()
 
@@ -124,7 +128,8 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .when("client", "tenant1", "type1", fileSource2)
         .returns(Future.successful(InsertResult(1, 1, 0)))
 
-      val rdc = RestoreTypeConfig("client", "tenant1", "type1", "a")
+      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
+      val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
 
       val (source, sink) = TestSource.probe[Source[ByteString, _]]
         .via(insertDocuments(documentBackupClient, rdc))
@@ -151,7 +156,8 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .when("client", "tenant1", "type1", fileSource)
         .returns(Future.failed(new RuntimeException("some error")))
 
-      val rdc = RestoreTypeConfig("client", "tenant1", "type1", "a")
+      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
+      val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
 
       val (source, sink) = TestSource.probe[Source[ByteString, _]]
         .via(insertDocuments(documentBackupClient, rdc))
@@ -172,7 +178,9 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
       //given
       val s = Source.repeat(InsertResult(1, 1, 0)).take(2001)
-      val rdc = RestoreTypeConfig("client", "tenant", "type", "a")
+
+      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
+      val rdc = RestoreTypeDefinition("client", "tenant", "type", "a", Some(List(indexDefinition)))
 
       //when
       val stream = s.via(aggregateAndLogResults(rdc))

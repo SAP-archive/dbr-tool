@@ -18,7 +18,7 @@ import akka.event.slf4j.SLF4JLogging
 import akka.stream.IOResult
 import akka.stream.scaladsl.{FileIO, Flow, JsonFraming, Source}
 import akka.util.ByteString
-import com.hybris.core.dbr.config.{AppConfig, RestoreTypeConfig}
+import com.hybris.core.dbr.config.{AppConfig, RestoreTypeDefinition}
 import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
 
@@ -29,8 +29,8 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
   val Parallelism = 1
 
   def insertType(restoreDir: String, documentBackupClient: DocumentBackupClient)
-                (implicit executionContext: ExecutionContext): Flow[RestoreTypeConfig, InsertResult, NotUsed] = {
-    Flow[RestoreTypeConfig]
+                (implicit executionContext: ExecutionContext): Flow[RestoreTypeDefinition, InsertResult, NotUsed] = {
+    Flow[RestoreTypeDefinition]
       .flatMapConcat(config ⇒ {
         log.info(s"Restoring tenant '${config.tenant}' type '${config.`type`}'")
         configToFileChunksSource(restoreDir, config)
@@ -39,14 +39,14 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
       })
   }
 
-  private[restore] def configToFileChunksSource(restoreDir: String, rtc: RestoreTypeConfig): Source[Source[ByteString, _], _] = {
+  private[restore] def configToFileChunksSource(restoreDir: String, rtc: RestoreTypeDefinition): Source[Source[ByteString, _], _] = {
     getFileSource(s"$restoreDir/${rtc.file}")
       .via(JsonFraming.objectScanner(readFileChunkSize))
       .grouped(documentsUploadChunk)
       .map(Source(_))
   }
 
-  private[restore] def insertDocuments(documentBackupClient: DocumentBackupClient, rtc: RestoreTypeConfig)
+  private[restore] def insertDocuments(documentBackupClient: DocumentBackupClient, rtc: RestoreTypeDefinition)
                                       (implicit executionContext: ExecutionContext): Flow[Source[ByteString, _], InsertResult, NotUsed] = {
     Flow[Source[ByteString, _]]
       .mapAsync(Parallelism) { rtd =>
@@ -67,7 +67,7 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
       }
   }
 
-  private[restore] def aggregateAndLogResults(rtc: RestoreTypeConfig): Flow[InsertResult, InsertResult, NotUsed] =
+  private[restore] def aggregateAndLogResults(rtc: RestoreTypeDefinition): Flow[InsertResult, InsertResult, NotUsed] =
     Flow[InsertResult]
       .fold(InsertResult(0, 0, 0))((acc, t) ⇒ acc.copy(
         totalDocuments = acc.totalDocuments + t.totalDocuments,

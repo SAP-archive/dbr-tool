@@ -17,8 +17,9 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
-import com.hybris.core.dbr.config.RestoreTypeConfig
+import com.hybris.core.dbr.config.RestoreTypeDefinition
 import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
+import io.circe.Json
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.duration.DurationInt
@@ -38,13 +39,13 @@ class RestoreServiceTest extends BaseCoreTest {
 
       // given
       val types = List(
-        RestoreTypeConfig("client", "tenant", "type1", "file1.json"),
-        RestoreTypeConfig("client", "tenant", "type2", "file2.json")
+        RestoreTypeDefinition("client", "tenant", "type1", "file1.json", Some(List(Json.fromString("""{keys: {"a1": 1}}""")))),
+        RestoreTypeDefinition("client", "tenant", "type2", "file2.json", Some(List(Json.fromString("""{keys: {"a3": 1}}"""))))
       )
 
       val restoreDir = File.newTemporaryDirectory()
-      restoreDir / "file1.json" overwrite """[{"type1":1},{"type1":2}]"""
-      restoreDir / "file2.json" overwrite """[{"type2":1}]"""
+      restoreDir / "file1.json" overwrite """[{"a1":1},{"a2":2}]"""
+      restoreDir / "file2.json" overwrite """[{"a3":1}]"""
 
       val documentServiceClient = mock[DocumentBackupClient]
 
@@ -56,9 +57,10 @@ class RestoreServiceTest extends BaseCoreTest {
             client == "client" &&
             tenant == "tenant" &&
             `type` == "type1" &&
-            result == """{"type1":1}{"type1":2}"""
+            result == """{"a1":1}{"a2":2}"""
           })
         .returns(Future.successful(InsertResult(1,1,0)))
+
       (documentServiceClient.insertDocuments _)
         .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
             val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
@@ -66,7 +68,7 @@ class RestoreServiceTest extends BaseCoreTest {
             client == "client" &&
             tenant == "tenant" &&
             `type` == "type2" &&
-            result == """{"type2":1}"""
+            result == """{"a3":1}"""
           })
         .returns(Future.successful(InsertResult(1,1,0)))
       //@formatter:on

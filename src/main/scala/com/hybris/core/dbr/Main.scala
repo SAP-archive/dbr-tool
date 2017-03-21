@@ -93,19 +93,19 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
   private def runRestore(cliConfig: CliConfig) = {
     prepareRestore(cliConfig) match {
-      case Right(restoreConfig) =>
-        doRestore(cliConfig, restoreConfig)
+      case Right(restoreDefinition) =>
+        doRestore(cliConfig, restoreDefinition)
 
       case Left(error) =>
         logger.error(error.message)
     }
   }
 
-  private def prepareRestore(cliConfig: CliConfig): Either[InternalAppError, RestoreConfig] = {
-    readRestoreConfig(s"${cliConfig.restoreSourceDir}/$summaryFileName")
+  private def prepareRestore(cliConfig: CliConfig): Either[InternalAppError, RestoreDefinition] = {
+    readRestoreDefinition(s"${cliConfig.restoreSourceDir}/$summaryFileName")
   }
 
-  private def doRestore(cliConfig: CliConfig, restoreConfig: RestoreConfig): Unit = {
+  private def doRestore(cliConfig: CliConfig, restoreDefinition: RestoreDefinition): Unit = {
     logger.info(s"Starting restore of client: ${cliConfig.client}")
 
     implicit val system = ActorSystem("dbr")
@@ -121,7 +121,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
         val restoreService = new RestoreService(documentBackupClient, cliConfig.restoreSourceDir)
 
-        restoreService.restore(restoreConfig.types)
+        restoreService.restore(restoreDefinition.definitions)
       }
 
     result onComplete {

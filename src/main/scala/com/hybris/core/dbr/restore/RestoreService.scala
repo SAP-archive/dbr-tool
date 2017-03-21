@@ -14,7 +14,7 @@ package com.hybris.core.dbr.restore
 import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Keep, RunnableGraph, Sink, Source}
-import com.hybris.core.dbr.config.RestoreTypeConfig
+import com.hybris.core.dbr.config.RestoreTypeDefinition
 import com.hybris.core.dbr.document.DocumentBackupClient
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -24,9 +24,9 @@ class RestoreService(documentBackupClient: DocumentBackupClient,
                     (implicit executionContext: ExecutionContext, materializer: Materializer)
   extends RestoreStream {
 
-  def restore(types: List[RestoreTypeConfig]): Future[Done] = createGraph(types).run()
+  def restore(types: List[RestoreTypeDefinition]): Future[Done] = createGraph(types).run()
 
-  private def createGraph(types: List[RestoreTypeConfig]): RunnableGraph[Future[Done]] = {
+  private def createGraph(types: List[RestoreTypeDefinition]): RunnableGraph[Future[Done]] = {
     Source(types)
       .via(insertType(restoreDir, documentBackupClient))
       .toMat(Sink.ignore)(Keep.right)

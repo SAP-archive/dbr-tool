@@ -41,9 +41,9 @@ trait FileConfig {
     * @param path command line configuration
     * @return restore configuration
     */
-  def readRestoreConfig(path: String): Either[InternalAppError, RestoreConfig] = {
-    readFileAs[List[RestoreTypeConfig]](path)
-      .map(types => RestoreConfig(types))
+  def readRestoreDefinition(path: String): Either[InternalAppError, RestoreDefinition] = {
+    readFileAs[List[RestoreTypeDefinition]](path)
+      .map(types => RestoreDefinition(types))
       .leftMap(error => convertToInternalAppError(error, path))
   }
 
@@ -63,9 +63,11 @@ trait FileConfig {
 }
 
 object FileConfig {
+
   implicit val backupConfigDecoder: Decoder[BackupConfig] = deriveDecoder
 
   implicit val backupTenantConfigDecoder: Decoder[BackupTenantConfig] = deriveDecoder
 
-  implicit val restoreTypeConfig: Decoder[RestoreTypeConfig] = deriveDecoder
+  implicit val restoreTypeDefinition: Decoder[RestoreTypeDefinition] = deriveDecoder
+
 }

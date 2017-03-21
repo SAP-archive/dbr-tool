@@ -57,14 +57,14 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       // then
       result mustBe Done
 
-      val restoreConfig = readRestoreConfig(dstDir.pathAsString + "/backup.json").right.value
-      restoreConfig.types must have size 2
+      val restoreConfig = readRestoreDefinition(dstDir.pathAsString + "/backup.json").right.value
+      restoreConfig.definitions must have size 2
 
-      val rtc1 = restoreConfig.types
+      val rtc1 = restoreConfig.definitions
         .find(rtc => rtc.client == "client" && rtc.tenant == "tenant" && rtc.`type` == "type1").value
       rtc1.file must not be empty
 
-      val rtc2 = restoreConfig.types
+      val rtc2 = restoreConfig.definitions
         .find(rtc => rtc.client == "client" && rtc.tenant == "tenant" && rtc.`type` == "type2").value
       rtc2.file must not be empty
 
