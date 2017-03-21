@@ -13,4 +13,10 @@ package com.hybris.core.dbr.model
 
 import io.circe.Json
 
+/**
+ * Container for index from Document service.
+ *
+ * @param keys index keys
+ * @param options index options
+ */
 case class IndexDefinition(keys: Json, options: Json)
