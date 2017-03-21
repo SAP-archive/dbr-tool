@@ -20,9 +20,10 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.{Materializer, StreamTcpException}
 import com.hybris.core.dbr.config.BuildInfo
 import com.hybris.core.dbr.exceptions.DocumentServiceClientException
+import com.hybris.core.dbr.model.IndexDefinition
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
+import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder
-import io.circe.{Decoder, _}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,6 +43,8 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
   private implicit val createIndexResponseDecoder: Decoder[CreateIndexResponse] = deriveDecoder
 
   private val authorizationHeader = token.map(t => Authorization(OAuth2BearerToken(t)))
+
+  private implicit val indexDefinitionDecoder: Decoder[IndexDefinition] = deriveDecoder
 
   override def getTypes(client: String, tenant: String): Future[List[String]] = {
 
@@ -69,7 +72,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       }
   }
 
-  override def getIndexes(client: String, tenant: String, typeName: String): Future[List[Json]] = {
+  override def getIndexes(client: String, tenant: String, typeName: String): Future[List[IndexDefinition]] = {
 
     val request = HttpRequest(
       uri = s"$documentServiceUrl/$tenant/$client/indexes/$typeName",
@@ -81,7 +84,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       .singleRequest(request)
       .flatMap {
         case response if response.status.isSuccess() =>
-          Unmarshal(response).to[List[Json]]
+          Unmarshal(response).to[List[IndexDefinition]]
 
         case response =>
           response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒

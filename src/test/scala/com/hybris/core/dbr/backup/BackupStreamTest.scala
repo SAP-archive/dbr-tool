@@ -19,7 +19,7 @@ import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient}
-import com.hybris.core.dbr.model.{BackupType, BackupTypeData, BackupTypeResult, ClientTenant}
+import com.hybris.core.dbr.model._
 import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.{Decoder, _}
@@ -31,6 +31,9 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
   implicit val materializer = ActorMaterializer()
 
   import system.dispatcher
+
+  implicit val indexDecoder: Decoder[IndexDefinition] = deriveDecoder
+  implicit val resultDecoder: Decoder[BackupTypeResult] = deriveDecoder
 
   "BackupStream" should {
 
@@ -86,8 +89,15 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
     "add indexes when configured" in {
 
       val documentServiceClient = stub[DocumentServiceClient]
-      val indexDefinition1 = parse("""{ "keys": { "_id": 1 }, "options": { "name":"_id_" } }""").getOrElse(Json.Null)
-      val indexDefinition2 = parse("""{ "keys": { "test": "text" }, "options": { "name":"text" } }""").getOrElse(Json.Null)
+
+      val indexDefinition1 = IndexDefinition(
+        parse(""" "keys": { "_id": 1 } """).getOrElse(Json.Null),
+        parse(""" "options": { "name":"_id_" } """).getOrElse(Json.Null)
+      )
+      val indexDefinition2 = IndexDefinition(
+        parse(""" "keys": { "test": "text" } """).getOrElse(Json.Null),
+        parse(""" "options": { "name":"text" } """).getOrElse(Json.Null)
+      )
 
       (documentServiceClient.getIndexes _).when("client1", "tenant1", "type1").returns(Future.successful(List(indexDefinition1)))
       (documentServiceClient.getIndexes _).when("client1", "tenant1", "type2").returns(Future.successful(List(indexDefinition1, indexDefinition2)))
@@ -224,8 +234,6 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       sink.expectNext(Done)
       sink.expectComplete()
 
-      implicit val resultDecoder: Decoder[BackupTypeResult] = deriveDecoder
-
       val summary = File(s"$path/summary.json").contentAsString
       val result = decode[List[BackupTypeResult]](summary).right.value
 
@@ -239,8 +247,14 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
     "write summary to file with index definition" in {
       val path = File.newTemporaryDirectory().pathAsString
 
-      val indexDefinition1 = parse("""{ "keys": { "_id": 1 }, "options": { "name":"_id_" } }""").getOrElse(Json.Null)
-      val indexDefinition2 = parse("""{ "keys": { "test": "text" }, "options": { "name":"text" } }""").getOrElse(Json.Null)
+      val indexDefinition1 = IndexDefinition(
+        parse("""{ "_id": 1 }""").getOrElse(Json.Null),
+        parse("""{ "name":"_id_"}""").getOrElse(Json.Null)
+      )
+      val indexDefinition2 = IndexDefinition(
+        parse("""{ "test": "text" }""").getOrElse(Json.Null),
+        parse("""{ "name":"text" }""").getOrElse(Json.Null)
+      )
 
       val (source, sink) = TestSource.probe[BackupTypeResult]
         .via(writeSummary(path, "summary.json"))

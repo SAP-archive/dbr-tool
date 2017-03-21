@@ -11,8 +11,6 @@
 */
 package com.hybris.core.dbr.model
 
-import io.circe.Json
-
 /**
  * Result of type's backup. If data was successfully written to file this result contains the name of the file.
  *
@@ -21,4 +19,4 @@ import io.circe.Json
  * @param `type` name of a type
  * @param file   name of file
  */
-case class BackupTypeResult(client: String, tenant: String, `type`: String, file: String, indexes: Option[List[Json]] = None)
+case class BackupTypeResult(client: String, tenant: String, `type`: String, file: String, indexes: Option[List[IndexDefinition]] = None)

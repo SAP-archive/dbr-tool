@@ -50,11 +50,11 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
         val indexes = client.getIndexes("client", "getTypesTenant", "type").futureValue
 
         indexes.size mustBe 2
-        indexes.head.hcursor.downField("keys").downField("_id").as[Int] mustBe Right(1)
-        indexes.head.hcursor.downField("options").downField("name").as[String] mustBe Right("_id_")
+        indexes.head.keys.hcursor.downField("_id").as[Int] mustBe Right(1)
+        indexes.head.options.hcursor.downField("name").as[String] mustBe Right("_id_")
 
-        indexes(1).hcursor.downField("keys").downField("test").as[String] mustBe Right("text")
-        indexes(1).hcursor.downField("options").downField("name").as[String] mustBe Right("text")
+        indexes(1).keys.hcursor.downField("test").as[String] mustBe Right("text")
+        indexes(1).options.hcursor.downField("name").as[String] mustBe Right("text")
       }
 
       "get types with User-Agent header" in {
@@ -185,7 +185,7 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
         path("client" / "indexes" / "type") {
           headerValuePF(extractToken) { token =>
             if (token == "token") {
-              complete(HttpEntity(ContentTypes.`application/json`, """[{ "keys": { "_id": 1 }, "options": { "name":"_id_" } }, { "keys": { "test": "text" }, "options": { "name":"text" } }]"""))
+              complete(HttpEntity(ContentTypes.`application/json`, """[{ "keys": { "_id": 1 }, "options": { "name":"_id_" }, "name" : "_id_" }, { "keys": { "test": "text" }, "options": { "name":"text" } }]"""))
             } else {
               complete(StatusCodes.BadRequest)
             }
