@@ -20,9 +20,9 @@ import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient}
 import com.hybris.core.dbr.model.{BackupType, BackupTypeData, BackupTypeResult, ClientTenant}
-import io.circe.Decoder
 import io.circe.generic.semiauto._
 import io.circe.parser._
+import io.circe.{Decoder, _}
 
 import scala.concurrent.Future
 
@@ -81,6 +81,57 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       sink.expectComplete()
 
       (documentServiceClient.getTypes _).verify(*, *).never()
+    }
+
+    "add indexes when configured" in {
+
+      val documentServiceClient = stub[DocumentServiceClient]
+      val indexDefinition1 = parse("""{ "keys": { "_id": 1 }, "options": { "name":"_id_" } }""").getOrElse(Json.Null)
+      val indexDefinition2 = parse("""{ "keys": { "test": "text" }, "options": { "name":"text" } }""").getOrElse(Json.Null)
+
+      (documentServiceClient.getIndexes _).when("client1", "tenant1", "type1").returns(Future.successful(List(indexDefinition1)))
+      (documentServiceClient.getIndexes _).when("client1", "tenant1", "type2").returns(Future.successful(List(indexDefinition1, indexDefinition2)))
+
+      val (source, sink) = TestSource.probe[BackupTypeResult]
+        .via(addIndexes(documentServiceClient, shouldSaveIndexDefinition = true))
+        .toMat(TestSink.probe[BackupTypeResult])(Keep.both)
+        .run()
+
+      sink.request(5)
+
+      source.sendNext(BackupTypeResult("client1", "tenant1", "type1", "file", None))
+      source.sendNext(BackupTypeResult("client1", "tenant1", "type2", "file", None))
+      source.sendComplete()
+
+      sink.expectNextUnordered(
+        BackupTypeResult("client1", "tenant1", "type1", "file", Some(List(indexDefinition1))),
+        BackupTypeResult("client1", "tenant1", "type2", "file", Some(List(indexDefinition1, indexDefinition2)))
+      )
+
+      sink.expectComplete()
+    }
+
+    "not add indexes when not configured" in {
+
+      val documentServiceClient = stub[DocumentServiceClient]
+
+      val (source, sink) = TestSource.probe[BackupTypeResult]
+        .via(addIndexes(documentServiceClient, shouldSaveIndexDefinition = false))
+        .toMat(TestSink.probe[BackupTypeResult])(Keep.both)
+        .run()
+
+      sink.request(5)
+
+      source.sendNext(BackupTypeResult("client1", "tenant1", "type1", "file", None))
+      source.sendNext(BackupTypeResult("client1", "tenant1", "type2", "file", None))
+      source.sendComplete()
+
+      sink.expectNextUnordered(
+        BackupTypeResult("client1", "tenant1", "type1", "file", None),
+        BackupTypeResult("client1", "tenant1", "type2", "file", None)
+      )
+
+      sink.expectComplete()
     }
 
     "flatten types" in {
@@ -149,7 +200,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       source.sendComplete()
 
       val file = sink.expectNextPF[String] {
-        case BackupTypeResult("client1", "tenant1", "type1", f) => f
+        case BackupTypeResult("client1", "tenant1", "type1", f, None) => f
       }
 
       File(s"$path/$file").contentAsString mustBe "abc"
@@ -184,6 +235,40 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
         BackupTypeResult("client1", "tenant2", "type1", "file3")
       )
     }
+
+    "write summary to file with index definition" in {
+      val path = File.newTemporaryDirectory().pathAsString
+
+      val indexDefinition1 = parse("""{ "keys": { "_id": 1 }, "options": { "name":"_id_" } }""").getOrElse(Json.Null)
+      val indexDefinition2 = parse("""{ "keys": { "test": "text" }, "options": { "name":"text" } }""").getOrElse(Json.Null)
+
+      val (source, sink) = TestSource.probe[BackupTypeResult]
+        .via(writeSummary(path, "summary.json"))
+        .toMat(TestSink.probe[Done])(Keep.both)
+        .run()
+
+      sink.request(5)
+
+      source.sendNext(BackupTypeResult("client1", "tenant1", "type1", "file1", Some(List(indexDefinition1))))
+      source.sendNext(BackupTypeResult("client1", "tenant1", "type2", "file2", Some(List(indexDefinition1, indexDefinition2))))
+      source.sendNext(BackupTypeResult("client1", "tenant2", "type1", "file3", Some(List(indexDefinition1))))
+      source.sendComplete()
+
+      sink.expectNext(Done)
+      sink.expectComplete()
+
+      implicit val resultDecoder: Decoder[BackupTypeResult] = deriveDecoder
+
+      val summary = File(s"$path/summary.json").contentAsString
+      val result = decode[List[BackupTypeResult]](summary).right.value
+
+      result must contain theSameElementsAs List(
+        BackupTypeResult("client1", "tenant1", "type1", "file1", Some(List(indexDefinition1))),
+        BackupTypeResult("client1", "tenant1", "type2", "file2", Some(List(indexDefinition1, indexDefinition2))),
+        BackupTypeResult("client1", "tenant2", "type1", "file3", Some(List(indexDefinition1)))
+      )
+    }
+
   }
 
 }

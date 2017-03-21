@@ -33,6 +33,7 @@ class BackupService(documentBackupClient: DocumentBackupClient,
       .via(flattenTypes)
       .via(addDocuments(documentBackupClient))
       .via(writeToFiles(destinationDir))
+      .via(addIndexes(documentServiceClient, true))
       .via(writeSummary(destinationDir, summaryFileName))
       .toMat(Sink.head)(Keep.right)
   }
