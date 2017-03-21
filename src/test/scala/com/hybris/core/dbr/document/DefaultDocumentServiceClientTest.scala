@@ -44,6 +44,17 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
       types must contain theSameElementsAs List("type1", "type2")
     }
 
+    "get indexes" in {
+      val indexes = client.getIndexes("client", "typesTenant", "type").futureValue
+
+      indexes.size mustBe 2
+      indexes.head.hcursor.downField("keys").downField("_id").as[Int] mustBe Right(1)
+      indexes.head.hcursor.downField("options").downField("name").as[String] mustBe Right("_id_")
+
+      indexes(1).hcursor.downField("keys").downField("test").as[String] mustBe Right("text")
+      indexes(1).hcursor.downField("options").downField("name").as[String] mustBe Right("text")
+    }
+
     "get types with User-Agent header" in {
 
       val types = client.getTypes("client.useragent", "typesTenant").futureValue
@@ -87,15 +98,24 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
   val route =
     pathPrefix("typesTenant") {
       get {
-        path("client.token") {
+        path("client" / "indexes"/ "type") {
           headerValuePF(extractToken) { token =>
             if (token == "token") {
-              complete(HttpEntity(ContentTypes.`application/json`, """{"types" : ["type1", "type2"]}"""))
+              complete(HttpEntity(ContentTypes.`application/json`, """[{ "keys": { "_id": 1 }, "options": { "name":"_id_" } }, { "keys": { "test": "text" }, "options": { "name":"text" } }]"""))
             } else {
               complete(StatusCodes.BadRequest)
             }
           }
         } ~
+          path("client.token") {
+            headerValuePF(extractToken) { token =>
+              if (token == "token") {
+                complete(HttpEntity(ContentTypes.`application/json`, """{"types" : ["type1", "type2"]}"""))
+              } else {
+                complete(StatusCodes.BadRequest)
+              }
+            }
+          } ~
           path("client.notoken") {
             headerValueByName("hybris-client") { client =>
               headerValueByName("hybris-tenant") { tenant =>
