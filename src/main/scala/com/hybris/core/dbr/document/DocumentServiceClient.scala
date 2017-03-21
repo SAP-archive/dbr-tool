@@ -39,4 +39,15 @@ trait DocumentServiceClient {
    */
   def getIndexes(client: String, tenant: String, `type`: String): Future[List[Json]]
 
+  /**
+    * Creates index in given type.
+    *
+    * @param client     YaaS client
+    * @param tenant     YaaS tenant
+    * @param `type`     type
+    * @param definition of index
+    * @return Name of created index.
+    */
+  def createIndex(client: String, tenant: String, `type`: String, definition: String): Future[String]
+
 }

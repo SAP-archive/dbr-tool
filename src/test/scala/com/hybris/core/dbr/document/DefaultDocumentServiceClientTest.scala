@@ -15,7 +15,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, StatusCodes}
-import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Directives.{path, _}
 import akka.stream.ActorMaterializer
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.BuildInfo
@@ -35,68 +35,151 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
 
   val client = new DefaultDocumentServiceClient("http://localhost:9877", Some("token"))
 
-  "DefaultDocumentBackupClient" should {
+  "DefaultDocumentBackupClient" when {
 
-    "get types" in {
+    "getting types" should {
 
-      val types = client.getTypes("client.token", "typesTenant").futureValue
+      "get types" in {
 
-      types must contain theSameElementsAs List("type1", "type2")
-    }
+        val types = client.getTypes("client.token", "getTypesTenant").futureValue
 
-    "get indexes" in {
-      val indexes = client.getIndexes("client", "typesTenant", "type").futureValue
+        types must contain theSameElementsAs List("type1", "type2")
+      }
 
-      indexes.size mustBe 2
-      indexes.head.hcursor.downField("keys").downField("_id").as[Int] mustBe Right(1)
-      indexes.head.hcursor.downField("options").downField("name").as[String] mustBe Right("_id_")
+      "get indexes" in {
+        val indexes = client.getIndexes("client", "getTypesTenant", "type").futureValue
 
-      indexes(1).hcursor.downField("keys").downField("test").as[String] mustBe Right("text")
-      indexes(1).hcursor.downField("options").downField("name").as[String] mustBe Right("text")
-    }
+        indexes.size mustBe 2
+        indexes.head.hcursor.downField("keys").downField("_id").as[Int] mustBe Right(1)
+        indexes.head.hcursor.downField("options").downField("name").as[String] mustBe Right("_id_")
 
-    "get types with User-Agent header" in {
+        indexes(1).hcursor.downField("keys").downField("test").as[String] mustBe Right("text")
+        indexes(1).hcursor.downField("options").downField("name").as[String] mustBe Right("text")
+      }
 
-      val types = client.getTypes("client.useragent", "typesTenant").futureValue
+      "get types with User-Agent header" in {
 
-      types must contain theSameElementsAs List("type1", "type2")
-    }
+        val types = client.getTypes("client.useragent", "getTypesTenant").futureValue
 
-    "get types without token" in {
+        types must contain theSameElementsAs List("type1", "type2")
+      }
 
-      val client = new DefaultDocumentServiceClient("http://localhost:9877", None)
+      "get types without token" in {
 
-      val types = client.getTypes("client.notoken", "typesTenant").futureValue
+        val client = new DefaultDocumentServiceClient("http://localhost:9877", None)
 
-      types must contain theSameElementsAs List("type1", "type2")
-    }
+        val types = client.getTypes("client.notoken", "getTypesTenant").futureValue
 
-    "handle bad response when getting types" in {
+        types must contain theSameElementsAs List("type1", "type2")
+      }
 
-      val result = client.getTypes("client.bad", "typesTenant").failed.futureValue
+      "handle bad response when getting types" in {
 
-      result mustBe a[DocumentServiceClientException]
-      result.asInstanceOf[DocumentServiceClientException].message must include("bad request message")
-      result.asInstanceOf[DocumentServiceClientException].message must include("400")
-    }
+        val result = client.getTypes("client.bad", "getTypesTenant").failed.futureValue
 
-    "handle failed request" in {
-
-      val client = new DefaultDocumentServiceClient("http://localhost:19382", None)
-
-      whenReady(client.getTypes("client.bad", "typesTenant").failed) { result ⇒
         result mustBe a[DocumentServiceClientException]
+        result.asInstanceOf[DocumentServiceClientException].message must include("bad request message")
+        result.asInstanceOf[DocumentServiceClientException].message must include("400")
+      }
+
+      "handle failed request" in {
+
+        val client = new DefaultDocumentServiceClient("http://localhost:19382", None)
+
+        whenReady(client.getTypes("client.bad", "getTypesTenant").failed) { result ⇒
+          result mustBe a[DocumentServiceClientException]
+        }
       }
     }
 
+    "creating index" should {
+
+      "create index" in {
+        val result = client.createIndex("client", "createIndexTenant", "cats", """{"keys": {"a": 1}}""").futureValue
+
+        result mustBe "newindex"
+      }
+
+      "create index with User-Agent header" in {
+
+        val result = client.createIndex("client", "createIndexTenant", "cats.useragent", """{"keys": {"a": 1}}""").futureValue
+
+        result mustBe "newindex"
+      }
+
+      "get types without token" in {
+
+        val client = new DefaultDocumentServiceClient("http://localhost:9877", None)
+
+        val types = client.createIndex("client", "createIndexTenant", "cats.notoken", """{"keys": {"a": 1}}""").futureValue
+
+        types mustBe "newindex"
+      }
+
+      "handle bad response when getting types" in {
+
+        val result = client.createIndex("client", "createIndexTenant", "cats.bad", """{"keys": {"a": 1}}""").failed.futureValue
+
+        result mustBe a[DocumentServiceClientException]
+        result.asInstanceOf[DocumentServiceClientException].message must include("bad request message")
+        result.asInstanceOf[DocumentServiceClientException].message must include("400")
+      }
+
+      "handle failed request" in {
+
+        val client = new DefaultDocumentServiceClient("http://localhost:19382", None)
+
+        whenReady(client.createIndex("client", "createIndexTenant", "cats.bad", """{"keys": {"a": 1}}""").failed) { result ⇒
+          result mustBe a[DocumentServiceClientException]
+        }
+      }
+    }
   }
 
   def extractToken: PartialFunction[HttpHeader, String] = {
     case Authorization(OAuth2BearerToken(token)) => token
   }
 
-  val route =
-    pathPrefix("typesTenant") {
+  val createIndexRoute = pathPrefix("createIndexTenant" / "client" / "indexes") {
+    post {
+      path("cats") {
+        headerValuePF(extractToken) { token =>
+          if (token == "token") {
+            complete(HttpEntity(ContentTypes.`application/json`, """{"id" : "newindex"}"""))
+          } else {
+            complete(StatusCodes.BadRequest)
+          }
+        }
+      } ~ path("cats.useragent") {
+        headerValueByName("User-Agent") { userAgent =>
+          if (userAgent == s"${BuildInfo.name}-${BuildInfo.version}") {
+            complete(HttpEntity(ContentTypes.`application/json`, """{"id" : "newindex"}"""))
+          }
+          else {
+            complete(StatusCodes.BadRequest → s"User-Agent in request: '$userAgent'. Expected: ${BuildInfo.name}-${BuildInfo.version}.")
+          }
+        }
+      } ~ path("cats.notoken") {
+        print("")
+        headerValueByName("hybris-client") { client =>
+          headerValueByName("hybris-tenant") { tenant =>
+            (client, tenant) match {
+              case ("client", "createIndexTenant") =>
+                complete(HttpEntity(ContentTypes.`application/json`, """{"id" : "newindex"}"""))
+              case _ ⇒
+                complete(StatusCodes.BadRequest)
+            }
+          }
+        }
+      } ~
+        path("cats.bad") {
+          complete((StatusCodes.BadRequest, "bad request message"))
+        }
+    }
+  }
+
+  val getTypesRoute =
+    pathPrefix("getTypesTenant") {
       get {
         path("client" / "indexes"/ "type") {
           headerValuePF(extractToken) { token =>
@@ -120,7 +203,7 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
             headerValueByName("hybris-client") { client =>
               headerValueByName("hybris-tenant") { tenant =>
                 (client, tenant) match {
-                  case ("client.notoken", "client") =>
+                  case ("client.notoken", "getTypesTenant") =>
                     complete(HttpEntity(ContentTypes.`application/json`, """{"types" : ["type1", "type2"]}"""))
                   case _ ⇒
                     complete(StatusCodes.BadRequest)
@@ -148,7 +231,9 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    binding = Await.result(Http().bindAndHandle(route, "localhost", 9877), 3 seconds)
+
+    val routes = getTypesRoute ~ createIndexRoute
+    binding = Await.result(Http().bindAndHandle(routes, "localhost", 9877), 3 seconds)
   }
 
   override protected def afterAll(): Unit = {

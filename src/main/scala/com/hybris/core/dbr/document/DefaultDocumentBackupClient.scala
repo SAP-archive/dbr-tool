@@ -13,9 +13,9 @@ package com.hybris.core.dbr.document
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.HttpEncodings.gzip
 import akka.http.scaladsl.model.headers._
+import akka.http.scaladsl.model.{HttpEntity, _}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Compression, Source}
 import akka.stream.{Materializer, StreamTcpException}
@@ -47,7 +47,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
 
     val request = HttpRequest(
       uri = s"$documentBackupUrl/data/$tenant/${`type`}",
-      headers = `Accept-Encoding`(gzip) :: `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") :: getHeaders(authorizationHeader, client))
+      headers = `Accept-Encoding`(gzip) :: `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") :: getHeaders(authorizationHeader, client, tenant))
 
     Http()
       .singleRequest(request)
@@ -80,7 +80,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
     val request = HttpRequest(method = HttpMethods.POST,
       uri = s"$documentBackupUrl/data/$tenant/${`type`}",
       entity = HttpEntity(ContentTypes.`application/json`, data = compressedDocuments),
-      headers = `Content-Encoding`(gzip) :: `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") :: getHeaders(authorizationHeader, client))
+      headers = `Content-Encoding`(gzip) :: `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") :: getHeaders(authorizationHeader, client, tenant))
 
     Http()
       .singleRequest(request)

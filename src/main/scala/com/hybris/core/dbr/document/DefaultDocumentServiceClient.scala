@@ -34,8 +34,10 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
   extends DocumentServiceClient with CirceSupport with YaasHeaders {
 
   private case class GetTypesResponse(types: List[String])
-
   private implicit val getTypesResponseDecoder: Decoder[GetTypesResponse] = deriveDecoder
+
+  private case class CreateIndexResponse(id: String)
+  private implicit val createIndexResponseDecoder: Decoder[CreateIndexResponse] = deriveDecoder
 
   private val authorizationHeader = token.map(t => Authorization(OAuth2BearerToken(t)))
 
@@ -45,7 +47,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       uri = s"$documentServiceUrl/$tenant/$client",
       headers = `Accept-Encoding`(identity) ::
         `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
-        getHeaders(authorizationHeader, client))
+        getHeaders(authorizationHeader, client, tenant))
 
     Http()
       .singleRequest(request)
@@ -71,7 +73,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       uri = s"$documentServiceUrl/$tenant/$client/indexes/$typeName",
       headers = `Accept-Encoding`(identity) ::
         `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
-        getHeaders(authorizationHeader, client))
+        getHeaders(authorizationHeader, client, tenant))
 
     Http()
       .singleRequest(request)
@@ -88,6 +90,39 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       .recoverWith {
         case _: StreamTcpException ⇒
           Future.failed(DocumentServiceClientException(s"TCP error during getting a list of types from the Document service."))
+      }
+  }
+
+  override def createIndex(client: String, tenant: String, `type`: String, definition: String): Future[String] = {
+
+    val request = HttpRequest(
+      method = HttpMethods.POST,
+      uri = s"$documentServiceUrl/$tenant/$client/indexes/${`type`}",
+      headers = `Accept-Encoding`(identity) ::
+        `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
+        getHeaders(authorizationHeader, client, tenant))
+
+    Http()
+      .singleRequest(request)
+      .flatMap {
+        case response if response.status.isSuccess() =>
+          Unmarshal(response).to[CreateIndexResponse].map(_.id)
+
+        case response =>
+          response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒ {
+            val message = s"Failed to create index for " +
+              s"client '$client' and tenant '$tenant' and type '${`type`}'," +
+              s". \nStatus code: ${response.status.intValue()}. \nReason: '$msg'."
+            Future.failed(DocumentServiceClientException(message))
+          }
+          )
+      }
+      .recoverWith {
+        case _: StreamTcpException ⇒
+          val msg = s"TCP error during creating index for " +
+            s"client '$client' and tenant '$tenant' and type '${`type`} " +
+            s"in the Document service."
+          Future.failed(DocumentServiceClientException(msg))
       }
   }
 }
