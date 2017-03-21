@@ -27,9 +27,9 @@ import scala.concurrent.duration.DurationInt
 
 class DefaultDocumentServiceClientTest extends BaseCoreTest {
 
-  implicit val materializer = ActorMaterializer()
-
   import system.dispatcher
+
+  implicit val materializer = ActorMaterializer()
 
   implicit val defaultPatience = PatienceConfig(timeout = Span(2, Seconds), interval = Span(30, Millis))
 
@@ -144,10 +144,12 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
     post {
       path("cats") {
         headerValuePF(extractToken) { token =>
-          if (token == "token") {
-            complete(HttpEntity(ContentTypes.`application/json`, """{"id" : "newindex"}"""))
-          } else {
-            complete(StatusCodes.BadRequest)
+          entity(as[String]) { entity ⇒
+            if (token == "token" && entity == """{"keys": {"a": 1}}""") {
+              complete(HttpEntity(ContentTypes.`application/json`, """{"id" : "newindex"}"""))
+            } else {
+              complete(StatusCodes.BadRequest)
+            }
           }
         }
       } ~ path("cats.useragent") {
@@ -160,7 +162,6 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
           }
         }
       } ~ path("cats.notoken") {
-        print("")
         headerValueByName("hybris-client") { client =>
           headerValueByName("hybris-tenant") { tenant =>
             (client, tenant) match {
@@ -181,7 +182,7 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
   val getTypesRoute =
     pathPrefix("getTypesTenant") {
       get {
-        path("client" / "indexes"/ "type") {
+        path("client" / "indexes" / "type") {
           headerValuePF(extractToken) { token =>
             if (token == "token") {
               complete(HttpEntity(ContentTypes.`application/json`, """[{ "keys": { "_id": 1 }, "options": { "name":"_id_" } }, { "keys": { "test": "text" }, "options": { "name":"text" } }]"""))

@@ -95,8 +95,11 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
   override def createIndex(client: String, tenant: String, `type`: String, definition: String): Future[String] = {
 
+    val entity = HttpEntity(ContentTypes.`application/json`, definition)
+
     val request = HttpRequest(
       method = HttpMethods.POST,
+      entity = entity,
       uri = s"$documentServiceUrl/$tenant/$client/indexes/${`type`}",
       headers = `Accept-Encoding`(identity) ::
         `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
