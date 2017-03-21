@@ -37,6 +37,7 @@ trait BackupStream extends SLF4JLogging {
 
   val DataParallelism = 1
 
+  implicit val indexDefinitionEncoder: Encoder[IndexDefinition] = deriveEncoder
   implicit val typeBackupResultEncoder: Encoder[BackupTypeResult] = deriveEncoder
 
   def addTypes(documentServiceClient: DocumentServiceClient)
@@ -120,7 +121,9 @@ trait BackupStream extends SLF4JLogging {
       .fold(List[BackupTypeResult]())((acc, btr) => acc :+ btr)
       .map { summary =>
         val file = File(s"$destinationDir/$fileName")
-        file.overwrite(summary.asJson.spaces4)
+        file.overwrite(summary.asJson.pretty(printer))
         Done
       }
+
+  private val printer = Printer.spaces4.copy(dropNullKeys = true)
 }
