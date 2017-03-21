@@ -18,7 +18,7 @@ import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.RestoreTypeDefinition
-import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
+import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient, InsertResult}
 import io.circe.Json
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -35,8 +35,7 @@ class RestoreServiceTest extends BaseCoreTest {
 
   "RestoreService" should {
 
-    "restore data" in {
-
+    "restore data without index creation" in {
       // given
       val types = List(
         RestoreTypeDefinition("client", "tenant", "type1", "file1.json", Some(List(Json.fromString("""{keys: {"a1": 1}}""")))),
@@ -47,10 +46,11 @@ class RestoreServiceTest extends BaseCoreTest {
       restoreDir / "file1.json" overwrite """[{"a1":1},{"a2":2}]"""
       restoreDir / "file2.json" overwrite """[{"a3":1}]"""
 
-      val documentServiceClient = mock[DocumentBackupClient]
+      val documentBackupClient = mock[DocumentBackupClient]
+      val documentServiceClient = stub[DocumentServiceClient]
 
       //@formatter:off
-      (documentServiceClient.insertDocuments _)
+      (documentBackupClient.insertDocuments _)
         .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
             val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
 
@@ -61,7 +61,7 @@ class RestoreServiceTest extends BaseCoreTest {
           })
         .returns(Future.successful(InsertResult(1,1,0)))
 
-      (documentServiceClient.insertDocuments _)
+      (documentBackupClient.insertDocuments _)
         .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
             val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
 
@@ -73,10 +73,48 @@ class RestoreServiceTest extends BaseCoreTest {
         .returns(Future.successful(InsertResult(1,1,0)))
       //@formatter:on
 
-      val restoreService = new RestoreService(documentServiceClient, restoreDir.pathAsString)
+      val restoreService = new RestoreService(documentBackupClient, documentServiceClient, restoreDir.pathAsString)
 
       // when
-      val result = restoreService.restore(types).futureValue
+      val result = restoreService.restore(types, true).futureValue
+
+      // then (+ mock expectations)
+      result mustBe Done
+      (documentServiceClient.createIndex _).verify(*, *, *, *).never
+    }
+
+    "restore data with index creation" in {
+      // given
+      val indexDefinition = Json.fromString("""{keys: {"a1": 1}}""")
+      val types = List(RestoreTypeDefinition("client", "tenant", "type1", "file1.json", Some(List(indexDefinition))))
+
+      val restoreDir = File.newTemporaryDirectory()
+      restoreDir / "file1.json" overwrite """[{"a1":1},{"a2":2}]"""
+
+      val documentBackupClient = mock[DocumentBackupClient]
+      val documentServiceClient = mock[DocumentServiceClient]
+
+      //@formatter:off
+      (documentBackupClient.insertDocuments _)
+        .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
+            val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
+
+            client == "client" &&
+            tenant == "tenant" &&
+            `type` == "type1" &&
+            result == """{"a1":1}{"a2":2}"""
+          })
+        .returns(Future.successful(InsertResult(1,1,0)))
+
+      (documentServiceClient.createIndex _)
+        .expects("client", "tenant", "type1", indexDefinition.toString)
+        .returns(Future.successful("hwdp"))
+      //@formatter:on
+
+      val restoreService = new RestoreService(documentBackupClient, documentServiceClient, restoreDir.pathAsString)
+
+      // when
+      val result = restoreService.restore(types, false).futureValue
 
       // then (+ mock expectations)
       result mustBe Done

@@ -20,7 +20,7 @@ import akka.util.ByteString
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.RestoreTypeDefinition
-import com.hybris.core.dbr.document.{DocumentBackupClient, InsertResult}
+import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
 import io.circe.Json
 
@@ -144,6 +144,37 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .sendComplete()
 
       sink.expectNextUnordered(InsertResult(1, 1, 0), InsertResult(1, 1, 0))
+        .expectComplete()
+    }
+
+    "create indexes" in {
+      // given
+      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
+
+      val documentServiceClient = stub[DocumentServiceClient]
+      (documentServiceClient.createIndex _)
+        .when("client", "tenant1", "type1", indexDefinition.toString)
+        .returns(Future.successful("hwdp"))
+
+      val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
+
+      val (source, sink) = TestSource.probe[RestoreTypeDefinition]
+        .via(createIndexes(documentServiceClient))
+        .toMat(TestSink.probe[RestoreTypeDefinition])(Keep.both)
+        .run()
+
+      // when
+      sink.request(10)
+
+      source
+        .sendNext(rdc)
+        .sendNext(rdc)
+        .sendComplete()
+
+      // then
+      sink
+        .expectNext(rdc)
+        .expectNext(rdc)
         .expectComplete()
     }
 

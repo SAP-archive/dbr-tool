@@ -118,10 +118,11 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
     val result = getOAuthToken(cliConfig.env, oauthClient)
       .flatMap { token =>
         val documentBackupClient = new DefaultDocumentBackupClient(documentBackupUrl(cliConfig.env), token)
+        val documentServiceClient = new DefaultDocumentServiceClient(documentServiceUrl(cliConfig.env), token)
 
-        val restoreService = new RestoreService(documentBackupClient, cliConfig.restoreSourceDir)
+        val restoreService = new RestoreService(documentBackupClient, documentServiceClient, cliConfig.restoreSourceDir)
 
-        restoreService.restore(restoreDefinition.definitions)
+        restoreService.restore(restoreDefinition.definitions, cliConfig.skipIndexes)
       }
 
     result onComplete {
