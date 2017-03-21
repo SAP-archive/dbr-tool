@@ -12,22 +12,22 @@
 
 name := "dbr"
 
-version := "0.2.1"
+version := "0.2.2"
 
 scalaVersion := "2.12.1"
 
 libraryDependencies ++= {
   object Versions {
     val akka = "2.4.17"
-    val akkaHttp = "10.0.4"
-    val akkaHttpCirce = "1.12.0"
+    val akkaHttp = "10.0.5"
+    val akkaHttpCirce = "1.14.0"
     val cats = "0.9.0"
     val circe = "0.7.0"
     val scalaLogging = "3.5.0"
     val typesafeConfig = "1.3.1"
     val betterFiles = "2.17.1"
     val scalaTest = "3.0.1"
-    val logback = "1.2.1"
+    val logback = "1.2.2"
     val scopt = "3.5.0"
     val scalaMock = "3.5.0"
   }

@@ -24,12 +24,12 @@ import io.circe.Json
 import io.circe.parser.parse
 import org.scalatest.time.{Millis, Seconds, Span}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 class BackupServiceTest extends BaseCoreTest with FileConfig {
 
   implicit val materializer = ActorMaterializer()
-  implicit val ec = system.dispatcher
+  implicit val ec: ExecutionContextExecutor = system.dispatcher
 
   implicit val defaultPatience = PatienceConfig(timeout = Span(5, Seconds), interval = Span(250, Millis))
 
