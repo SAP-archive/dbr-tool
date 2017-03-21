@@ -18,7 +18,7 @@ import akka.http.scaladsl.model.FormData
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.{ActorMaterializer, StreamTcpException}
 import com.hybris.core.dbr.exceptions.OAuthClientException
-import de.heikoseeberger.akkahttpcirce.CirceSupport
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import io.circe.Decoder
 import io.circe.generic.semiauto._
 
@@ -27,16 +27,16 @@ import scala.concurrent.{ExecutionContext, Future}
 trait OAuth {
 
   /**
-    * Accesses the OAuth service and gets valid token.
-    *
-    * @return token.
-    */
+   * Accesses the OAuth service and gets valid token.
+   *
+   * @return token.
+   */
   def getToken: Future[String]
 
 }
 
 class OAuthClient(oauthUri: String, clientId: String, clientSecret: String, scopes: List[String])
-                 (implicit system: ActorSystem, executionContext: ExecutionContext) extends CirceSupport with OAuth {
+                 (implicit system: ActorSystem, executionContext: ExecutionContext) extends FailFastCirceSupport with OAuth {
 
   case class TokenResponse(token_type: String, access_token: String, expires_in: Int, scope: String)
 

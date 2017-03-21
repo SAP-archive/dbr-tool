@@ -20,7 +20,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.{Materializer, StreamTcpException}
 import com.hybris.core.dbr.config.BuildInfo
 import com.hybris.core.dbr.exceptions.DocumentServiceClientException
-import de.heikoseeberger.akkahttpcirce.CirceSupport
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import io.circe.generic.semiauto.deriveDecoder
 import io.circe.{Decoder, _}
 
@@ -31,12 +31,14 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
                                   (implicit system: ActorSystem,
                                    materializer: Materializer,
                                    executionContext: ExecutionContext)
-  extends DocumentServiceClient with CirceSupport with YaasHeaders {
+  extends DocumentServiceClient with FailFastCirceSupport with YaasHeaders {
 
   private case class GetTypesResponse(types: List[String])
+
   private implicit val getTypesResponseDecoder: Decoder[GetTypesResponse] = deriveDecoder
 
   private case class CreateIndexResponse(id: String)
+
   private implicit val createIndexResponseDecoder: Decoder[CreateIndexResponse] = deriveDecoder
 
   private val authorizationHeader = token.map(t => Authorization(OAuth2BearerToken(t)))
@@ -47,7 +49,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       uri = s"$documentServiceUrl/$tenant/$client",
       headers = `Accept-Encoding`(identity) ::
         `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
-        getHeaders(authorizationHeader, client, tenant))
+        getHeaders(authorizationHeader, client))
 
     Http()
       .singleRequest(request)
@@ -73,7 +75,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       uri = s"$documentServiceUrl/$tenant/$client/indexes/$typeName",
       headers = `Accept-Encoding`(identity) ::
         `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
-        getHeaders(authorizationHeader, client, tenant))
+        getHeaders(authorizationHeader, client))
 
     Http()
       .singleRequest(request)
@@ -103,7 +105,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       uri = s"$documentServiceUrl/$tenant/$client/indexes/${`type`}",
       headers = `Accept-Encoding`(identity) ::
         `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
-        getHeaders(authorizationHeader, client, tenant))
+        getHeaders(authorizationHeader, client))
 
     Http()
       .singleRequest(request)

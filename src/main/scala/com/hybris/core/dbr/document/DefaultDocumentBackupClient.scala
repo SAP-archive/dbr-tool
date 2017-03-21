@@ -22,7 +22,7 @@ import akka.stream.{Materializer, StreamTcpException}
 import akka.util.ByteString
 import com.hybris.core.dbr.config.BuildInfo
 import com.hybris.core.dbr.exceptions.{DocumentBackupClientException, DocumentServiceClientException}
-import de.heikoseeberger.akkahttpcirce.CirceSupport
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder
 
@@ -35,7 +35,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
                                  (implicit system: ActorSystem,
                                   materializer: Materializer,
                                   executionContext: ExecutionContext)
-  extends DocumentBackupClient with CirceSupport with YaasHeaders {
+  extends DocumentBackupClient with FailFastCirceSupport with YaasHeaders {
 
   val MaxBytesPerChunkDefault: Int = 100 * 1024 * 1024
 
@@ -47,7 +47,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
 
     val request = HttpRequest(
       uri = s"$documentBackupUrl/data/$tenant/${`type`}",
-      headers = `Accept-Encoding`(gzip) :: `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") :: getHeaders(authorizationHeader, client, tenant))
+      headers = `Accept-Encoding`(gzip) :: `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") :: getHeaders(authorizationHeader, client))
 
     Http()
       .singleRequest(request)
@@ -80,7 +80,7 @@ class DefaultDocumentBackupClient(documentBackupUrl: String,
     val request = HttpRequest(method = HttpMethods.POST,
       uri = s"$documentBackupUrl/data/$tenant/${`type`}",
       entity = HttpEntity(ContentTypes.`application/json`, data = compressedDocuments),
-      headers = `Content-Encoding`(gzip) :: `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") :: getHeaders(authorizationHeader, client, tenant))
+      headers = `Content-Encoding`(gzip) :: `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") :: getHeaders(authorizationHeader, client))
 
     Http()
       .singleRequest(request)

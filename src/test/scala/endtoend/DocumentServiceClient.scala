@@ -19,13 +19,13 @@ import akka.http.scaladsl.model.{HttpEntity, _}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
-import de.heikoseeberger.akkahttpcirce.CirceSupport
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object DocumentServiceClient extends CirceSupport {
+object DocumentServiceClient extends FailFastCirceSupport {
 
   private case class InsertDocumentResponse(id: String)
 
