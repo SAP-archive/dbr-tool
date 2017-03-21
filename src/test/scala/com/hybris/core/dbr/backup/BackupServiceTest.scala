@@ -20,6 +20,8 @@ import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.FileConfig
 import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient}
 import com.hybris.core.dbr.model.ClientTenant
+import io.circe.Json
+import io.circe.parser.parse
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.Future
@@ -27,13 +29,13 @@ import scala.concurrent.Future
 class BackupServiceTest extends BaseCoreTest with FileConfig {
 
   implicit val materializer = ActorMaterializer()
-  import system.dispatcher
+  implicit val ec = system.dispatcher
 
-  implicit val defaultPatience = PatienceConfig(timeout =  Span(5, Seconds), interval = Span(250, Millis))
+  implicit val defaultPatience = PatienceConfig(timeout = Span(5, Seconds), interval = Span(250, Millis))
 
   "BackupService" should {
 
-    "backup data" in {
+    "backup data with index" in {
 
       // given
       val dstDir = File.newTemporaryDirectory()
@@ -49,7 +51,12 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       (documentBackupClient.getDocuments _).when("client", "tenant", "type2")
         .returns(Future.successful(type2Stream))
 
-      val backupService = new BackupService(documentBackupClient, documentServiceClient, dstDir.pathAsString, "backup.json")
+      val indexDefinition = parse("""{ "keys": { "_id": 1 }, "options": { "name":"_id_" } }""").getOrElse(Json.Null)
+
+      (documentServiceClient.getIndexes _).when("client", "tenant", "type1").returns(Future.successful(List(indexDefinition)))
+      (documentServiceClient.getIndexes _).when("client", "tenant", "type2").returns(Future.successful(List(indexDefinition)))
+
+      val backupService = new BackupService(documentBackupClient, documentServiceClient, dstDir.pathAsString, "backup.json", true)
 
       // when
       val result = backupService.runBackup(List(ClientTenant("client", "tenant", List()))).futureValue
@@ -63,10 +70,12 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       val rtc1 = restoreConfig.definitions
         .find(rtc => rtc.client == "client" && rtc.tenant == "tenant" && rtc.`type` == "type1").value
       rtc1.file must not be empty
+      rtc1.indexes mustBe Some(List(indexDefinition))
 
       val rtc2 = restoreConfig.definitions
         .find(rtc => rtc.client == "client" && rtc.tenant == "tenant" && rtc.`type` == "type2").value
       rtc2.file must not be empty
+      rtc2.indexes mustBe Some(List(indexDefinition))
 
       val file1Content = File(s"${dstDir.pathAsString}/${rtc1.file}").contentAsString
       file1Content mustBe """[{"type1":1},{"type1":2}]"""

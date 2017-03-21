@@ -22,7 +22,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class BackupService(documentBackupClient: DocumentBackupClient,
                     documentServiceClient: DocumentServiceClient,
                     destinationDir: String,
-                    summaryFileName: String)
+                    summaryFileName: String,
+                    backupIndex: Boolean)
                    (implicit executionContext: ExecutionContext, materializer: Materializer) extends BackupStream {
 
   def runBackup(cts: List[ClientTenant]): Future[Done] = createGraph(cts).run()
@@ -33,7 +34,7 @@ class BackupService(documentBackupClient: DocumentBackupClient,
       .via(flattenTypes)
       .via(addDocuments(documentBackupClient))
       .via(writeToFiles(destinationDir))
-      .via(addIndexes(documentServiceClient, true))
+      .via(addIndexes(documentServiceClient, backupIndex))
       .via(writeSummary(destinationDir, summaryFileName))
       .toMat(Sink.head)(Keep.right)
   }

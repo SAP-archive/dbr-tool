@@ -16,7 +16,8 @@ case class CliConfig(command: String = "",
                      client: String = "",
                      configFile: String = "",
                      backupDestinationDir: String = "",
-                     restoreSourceDir: String = "") {
+                     restoreSourceDir: String = "",
+                     skipIndexes: Boolean = false) {
 
   def isBackup: Boolean = command == "backup"
 

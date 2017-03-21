@@ -19,7 +19,7 @@ trait Cli extends AppConfig {
   private val allEnvironments = environments.mkString(", ")
 
   private val parser = new scopt.OptionParser[CliConfig](appName) {
-    
+
     override def showUsageOnError = true
 
     head(appName, appVersion, "- Document Service Backup/Restore Tool")
@@ -50,7 +50,11 @@ trait Cli extends AppConfig {
         opt[String]("client")
           .action((cl, cfg) => cfg.copy(client = cl))
           .text("YaaS client.")
-          .required()
+          .required(),
+        opt[Unit]("skipIndexes")
+          .action((_, cfg) => cfg.copy(skipIndexes = true))
+          .text("Skip index backup.")
+          .optional()
       )
 
     note("")

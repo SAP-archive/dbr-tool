@@ -26,8 +26,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 /**
-  * Main class of backup tool.
-  */
+ * Main class of backup tool.
+ */
 object Main extends App with Cli with FileConfig with AppConfig with LazyLogging {
 
   private def run(): Unit = {
@@ -36,7 +36,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
       case Some(cliConfig) if cliConfig.isRestore => runRestore(cliConfig)
 
-      case Some(_) ⇒  logger.error("Error parsing arguments. Try --help for more information.")
+      case Some(_) ⇒ logger.error("Error parsing arguments. Try --help for more information.")
 
       case None => // ignore and stop
     }
@@ -73,7 +73,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
         val backupDestinationDir = s"${cliConfig.backupDestinationDir}/backup-$timestamp"
         FileOps.prepareEmptyDir(backupDestinationDir)
-        val backupJob = new BackupService(documentBackupClient, documentServiceClient, backupDestinationDir, summaryFileName)
+        val backupJob = new BackupService(documentBackupClient, documentServiceClient, backupDestinationDir, summaryFileName, !cliConfig.skipIndexes)
 
         val cts = backupConfig.tenants.map(t => ClientTenant(cliConfig.client, t.tenant, t.types.getOrElse(List())))
 
