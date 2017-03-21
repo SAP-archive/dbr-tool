@@ -21,8 +21,8 @@ import akka.stream.{Materializer, StreamTcpException}
 import com.hybris.core.dbr.config.BuildInfo
 import com.hybris.core.dbr.exceptions.DocumentServiceClientException
 import de.heikoseeberger.akkahttpcirce.CirceSupport
-import io.circe.Decoder
 import io.circe.generic.semiauto.deriveDecoder
+import io.circe.{Decoder, _}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,8 +44,8 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
     val request = HttpRequest(
       uri = s"$documentServiceUrl/$tenant/$client",
       headers = `Accept-Encoding`(identity) ::
-      `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
-       getHeaders(authorizationHeader, client))
+        `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
+        getHeaders(authorizationHeader, client))
 
     Http()
       .singleRequest(request)
@@ -56,6 +56,32 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
         case response =>
           response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒
             Future.failed(DocumentServiceClientException(s"Failed to get types for client '$client' and tenant '$tenant'," +
+              s". \nStatus code: ${response.status.intValue()}. \nReason: '$msg'."))
+          )
+      }
+      .recoverWith {
+        case _: StreamTcpException ⇒
+          Future.failed(DocumentServiceClientException(s"TCP error during getting a list of types from the Document service."))
+      }
+  }
+
+  override def getIndexes(client: String, tenant: String, typeName: String): Future[List[Json]] = {
+
+    val request = HttpRequest(
+      uri = s"$documentServiceUrl/$tenant/$client/indexes/$typeName",
+      headers = `Accept-Encoding`(identity) ::
+        `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
+        getHeaders(authorizationHeader, client))
+
+    Http()
+      .singleRequest(request)
+      .flatMap {
+        case response if response.status.isSuccess() =>
+          Unmarshal(response).to[List[Json]]
+
+        case response =>
+          response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒
+            Future.failed(DocumentServiceClientException(s"Failed to get indexes for client '$client', tenant '$tenant', and type '$typeName'" +
               s". \nStatus code: ${response.status.intValue()}. \nReason: '$msg'."))
           )
       }
