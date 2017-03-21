@@ -90,7 +90,7 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
       .mapAsync(Parallelism)(id ⇒ documentServiceClient.createIndex(rtd.client, rtd.tenant, rtd.`type`, id.toString))
       .runFold(List[String]())((acc, id) ⇒ id :: acc)
       .map(res ⇒ {
-        log.info(s"${res.size} indexes restored: ${res.mkString(", ")}")
+        log.info(s"${res.size} index(es) restored: ${res.mkString(", ")}")
         rtd
       })
 

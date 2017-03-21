@@ -12,8 +12,8 @@
 package com.hybris.core.dbr.config
 
 /**
- * Functions for command line interface.
- */
+  * Functions for command line interface.
+  */
 trait Cli extends AppConfig {
 
   private val allEnvironments = environments.mkString(", ")
@@ -36,6 +36,11 @@ trait Cli extends AppConfig {
 
     note("")
 
+    def skipIndexes(text: String) = opt[Unit]("skipIndexes")
+        .action((_, cfg) => cfg.copy(skipIndexes = true))
+        .text(text)
+        .optional()
+
     cmd("backup")
       .action((_, cfg) => cfg.copy(command = "backup"))
       .children(
@@ -51,10 +56,7 @@ trait Cli extends AppConfig {
           .action((cl, cfg) => cfg.copy(client = cl))
           .text("YaaS client.")
           .required(),
-        opt[Unit]("skipIndexes")
-          .action((_, cfg) => cfg.copy(skipIndexes = true))
-          .text("Skip index backup.")
-          .optional()
+        skipIndexes("Skip index backup.")
       )
 
     note("")
@@ -65,7 +67,8 @@ trait Cli extends AppConfig {
         opt[String]("dir")
           .action((srcDir, cfg) => cfg.copy(restoreSourceDir = srcDir))
           .text("Directory with backup files.")
-          .required()
+          .required(),
+        skipIndexes("Skip index restore.")
       )
   }
 
