@@ -36,11 +36,6 @@ trait Cli extends AppConfig {
 
     note("")
 
-    def skipIndexes(text: String) = opt[Unit]("skipIndexes")
-        .action((_, cfg) => cfg.copy(skipIndexes = true))
-        .text(text)
-        .optional()
-
     cmd("backup")
       .action((_, cfg) => cfg.copy(command = "backup"))
       .children(
@@ -70,6 +65,11 @@ trait Cli extends AppConfig {
           .required(),
         skipIndexes("Skip index restore.")
       )
+
+    private def skipIndexes(text: String) = opt[Unit]("skipIndexes")
+      .action((_, cfg) => cfg.copy(skipIndexes = true))
+      .text(text)
+      .optional()
   }
 
   def readCliConfig(args: Array[String]): Option[CliConfig] = {
