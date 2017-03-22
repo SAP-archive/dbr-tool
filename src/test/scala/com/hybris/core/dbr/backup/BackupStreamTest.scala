@@ -91,12 +91,12 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       val documentServiceClient = stub[DocumentServiceClient]
 
       val indexDefinition1 = IndexDefinition(
-        parse(""" "keys": { "_id": 1 } """).getOrElse(Json.Null),
-        parse(""" "options": { "name":"_id_" } """).getOrElse(Json.Null)
+        parse("""{"number":1}""").getOrElse(Json.Null),
+        parse("""{"name":"number"}""").getOrElse(Json.Null)
       )
       val indexDefinition2 = IndexDefinition(
-        parse(""" "keys": { "test": "text" } """).getOrElse(Json.Null),
-        parse(""" "options": { "name":"text" } """).getOrElse(Json.Null)
+        parse("""{"test":"text"}""").getOrElse(Json.Null),
+        parse("""{"name":"text"}""").getOrElse(Json.Null)
       )
 
       (documentServiceClient.getIndexes _).when("client1", "tenant1", "type1").returns(Future.successful(List(indexDefinition1)))
@@ -117,6 +117,37 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
         BackupTypeResult("client1", "tenant1", "type1", "file", Some(List(indexDefinition1))),
         BackupTypeResult("client1", "tenant1", "type2", "file", Some(List(indexDefinition1, indexDefinition2)))
       )
+
+      sink.expectComplete()
+    }
+
+    "filter _id index" in {
+
+      val documentServiceClient = stub[DocumentServiceClient]
+
+      val idIndexDefinition = IndexDefinition(
+        parse("""{"_id":1}""").getOrElse(Json.Null),
+        parse("""{"name":"new_id_index"}""").getOrElse(Json.Null)
+      )
+
+      val normalIndexDefinition = IndexDefinition(
+        parse("""{"test":"text"}""").getOrElse(Json.Null),
+        parse("""{"name":"text"}""").getOrElse(Json.Null)
+      )
+
+      (documentServiceClient.getIndexes _).when("client", "tenant", "type").returns(Future.successful(List(idIndexDefinition, normalIndexDefinition)))
+
+      val (source, sink) = TestSource.probe[BackupTypeResult]
+        .via(addIndexes(documentServiceClient, shouldSaveIndexDefinition = true))
+        .toMat(TestSink.probe[BackupTypeResult])(Keep.both)
+        .run()
+
+      sink.request(5)
+
+      source.sendNext(BackupTypeResult("client", "tenant", "type", "file", None))
+      source.sendComplete()
+
+      sink.expectNext(BackupTypeResult("client", "tenant", "type", "file", Some(List(normalIndexDefinition))))
 
       sink.expectComplete()
     }
