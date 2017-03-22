@@ -41,6 +41,7 @@ Parameters:
 -	`client` - Name of the client for whom the operation is performed.
 -	`config` - File you have to create manually before the backup. It contains configuration where tenants and types are listed. For more information on the structure of config file, see the next section.
 -	`out` - Destination directory where output files will be stored. Every backup operation creates a new directory in `out` directory with the following naming convention: `backup-TIMESTAMP`.
+- 	`skipIndexes` - Skips backup of indexes
 
 Backup requires `CLIENT_ID` and `CLIENT_SECRET` environment variable to be set with appropriate auth credentials for getting access token.
 
@@ -72,6 +73,10 @@ Additionally you can specify which types should be downloaded. If types are not 
 }
 ```
 
+#### Indexes
+
+Along with backup of data, backup of indexes is done. To skip backup of indexes use `--skipIndexes`.
+
 #### Outcome 
 
 The outcome of backup is a set of files in the destination directory. Every type is stored in a separate file as an array of extended JSONs. 
@@ -93,6 +98,7 @@ Parameters:
  
 -	`env` - Name of an environment, possible values: us-prod, us-stage, eu.
 -	`dir` - Source directory with files containing the data. 
+- 	`skipIndexes` - Skips restore of indexes
 
 Restore requires `CLIENT_ID` and `CLIENT_SECRET` environment variable to be set with appropriate auth credentials for getting access token.
 
@@ -104,6 +110,10 @@ $ export CLIENT_SECRET=<setme>
 
 $ bin/dbr restore --env us-prod --dir tmp/hybris_product_backup/backup-1488551648
 ```
+
+#### Indexes
+
+Even if backup was done with indexes, you can skip restore of indexes. Similar to backup, to skip restore of indexes use `--skipIndexes`.
 
 #### Configuration
 
@@ -124,6 +134,17 @@ You can manipulate this file in order to selectively restore selected types.
         "tenant" : "marketplace",
         "type" : "variants",
         "file" : "6ab630cd-0404-476b-bc99-89271c5b0792.json"
+        "indexes" : [
+            {
+                "keys" : {
+                    "name" : 1
+                },
+                "options" : {
+                    "name" : "variant-name-index"
+                }
+            }
+        ]
+        
     }
 ]
 ````
