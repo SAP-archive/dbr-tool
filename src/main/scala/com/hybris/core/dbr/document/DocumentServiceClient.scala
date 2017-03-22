@@ -41,13 +41,13 @@ trait DocumentServiceClient {
   def getIndexes(client: String, tenant: String, `type`: String): Future[List[IndexDefinition]]
 
   /**
-   * Creates index in given type.
+   * Ensures index exists in given type.
    *
    * @param client     YaaS client
    * @param tenant     YaaS tenant
    * @param `type`     type
    * @param definition of index
-   * @return Name of created index.
+   * @return Information that operation has succeed.
    */
   def createIndex(client: String, tenant: String, `type`: String, definition: IndexDefinition): Future[NotUsed]
 
