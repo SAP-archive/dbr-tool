@@ -25,6 +25,7 @@ import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient
 import com.hybris.core.dbr.exceptions.RestoreException
 import com.hybris.core.dbr.model.IndexDefinition
 import io.circe.Json
+import io.circe.parser._
 
 import scala.concurrent.{Await, Future}
 
@@ -49,7 +50,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
           |]
         """.stripMargin
 
-      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
+      val indexDefinition = IndexDefinition(parse("""{"file1": 1}""").getOrElse(Json.Null), parse("""{"name": "test"}""").getOrElse(Json.Null))
       val stream =
         configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
@@ -84,7 +85,8 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
            |]
             """.stripMargin
 
-      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
+
+      val indexDefinition = IndexDefinition(parse("""{"file1": 1}""").getOrElse(Json.Null), parse("""{"name": "test"}""").getOrElse(Json.Null))
       val stream =
         configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName1, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
@@ -103,7 +105,10 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       val testDir = File.newTemporaryDirectory()
       val fileName = randomName
 
-      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
+      val indexDefinition = IndexDefinition(
+        parse("""{"file1": 1}""").getOrElse(Json.Null),
+        parse("""{"name": "test"}""").getOrElse(Json.Null)
+      )
       val stream =
         configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
@@ -130,7 +135,11 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .when("client", "tenant1", "type1", fileSource2)
         .returns(Future.successful(InsertResult(1, 1, 0)))
 
-      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
+      val indexDefinition = IndexDefinition(
+        parse("""{"file1": 1}""").getOrElse(Json.Null),
+        parse("""{"name": "test"}""").getOrElse(Json.Null)
+      )
+
       val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
 
       val (source, sink) = TestSource.probe[Source[ByteString, _]]
@@ -151,7 +160,10 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
     "create indexes" in {
       // given
-      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
+      val indexDefinition = IndexDefinition(
+        parse("""{"file1": 1}""").getOrElse(Json.Null),
+        parse("""{"name": "test"}""").getOrElse(Json.Null)
+      )
 
       val documentServiceClient = stub[DocumentServiceClient]
       (documentServiceClient.createIndex _)
@@ -180,6 +192,37 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .expectComplete()
     }
 
+    "filter id index" in {
+      // given
+      val indexDefinition = IndexDefinition(
+        parse("""{"_id": 1}""").getOrElse(Json.Null),
+        Json.Null
+      )
+
+      val documentServiceClient = stub[DocumentServiceClient]
+
+      val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
+
+      val (source, sink) = TestSource.probe[RestoreTypeDefinition]
+        .via(createIndexes(documentServiceClient))
+        .toMat(TestSink.probe[RestoreTypeDefinition])(Keep.both)
+        .run()
+
+      // when
+      sink.request(10)
+
+      source
+        .sendNext(rdc)
+        .sendComplete()
+
+      // then
+      sink
+        .expectNext(rdc)
+        .expectComplete()
+
+      (documentServiceClient.createIndex _ ).verify(*, *, * ,*).never() // index not created
+    }
+
     "fail when inserting document fails" in {
 
       val documentBackupClient = stub[DocumentBackupClient]
@@ -189,7 +232,11 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .when("client", "tenant1", "type1", fileSource)
         .returns(Future.failed(new RuntimeException("some error")))
 
-      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
+      val indexDefinition = IndexDefinition(
+        parse("""{"file1": 1}""").getOrElse(Json.Null),
+        parse("""{"name": "test"}""").getOrElse(Json.Null)
+      )
+
       val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
 
       val (source, sink) = TestSource.probe[Source[ByteString, _]]
@@ -212,7 +259,10 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       //given
       val s = Source.repeat(InsertResult(1, 1, 0)).take(2001)
 
-      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
+      val indexDefinition = IndexDefinition(
+        parse("""{"file1": 1}""").getOrElse(Json.Null),
+        parse("""{"name": "test"}""").getOrElse(Json.Null)
+      )
       val rdc = RestoreTypeDefinition("client", "tenant", "type", "a", Some(List(indexDefinition)))
 
       //when
