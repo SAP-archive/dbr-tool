@@ -47,7 +47,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
 
   private implicit val indexDefinitionEncoder: Encoder[IndexDefinition] = deriveEncoder
 
-  override def getTypes(client: String, tenant: String): Future[List[String]] = {
+  override def getTypes(client: String, tenant: String): Future[Set[String]] = {
 
     val request = HttpRequest(
       uri = s"$documentServiceUrl/$tenant/$client",
@@ -59,7 +59,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       .singleRequest(request)
       .flatMap {
         case response if response.status.isSuccess() =>
-          Unmarshal(response).to[GetTypesResponse].map(_.types)
+          Unmarshal(response).to[GetTypesResponse].map(_.types.toSet)
 
         case response =>
           response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒

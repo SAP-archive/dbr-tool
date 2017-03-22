@@ -13,4 +13,4 @@ package com.hybris.core.dbr.config
 
 case class BackupConfig(tenants: List[BackupTenantConfig])
 
-case class BackupTenantConfig(tenant: String, types: Option[List[String]])
+case class BackupTenantConfig(tenant: String, types: Option[Set[String]])

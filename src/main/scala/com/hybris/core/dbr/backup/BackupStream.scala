@@ -44,21 +44,18 @@ trait BackupStream extends SLF4JLogging {
               (implicit executionContext: ExecutionContext): Flow[ClientTenant, ClientTenant, NotUsed] = {
     Flow[ClientTenant]
       .mapAsync(Parallelism) { ct =>
-        if (ct.types.nonEmpty) {
-          Future.successful(ct)
-        }
-        else {
-          val result = documentServiceClient
-            .getTypes(ct.client, ct.tenant)
-            .map(types => ct.copy(types = types))
 
-          result.foreach { elem =>
-            val typesStr = elem.types.mkString(", ")
-            log.info(s"Types [$typesStr] for tenant '${elem.tenant}' received.")
-          }
+        val result = documentServiceClient
+          .getTypes(ct.client, ct.tenant)
+          .map(types ⇒ if (ct.types.isEmpty) types else types.intersect(ct.types))
+          .map(types => ct.copy(types = types))
 
-          result
+        result.foreach { elem =>
+          val typesStr = elem.types.mkString(", ")
+          log.info(s"Types [$typesStr] for tenant '${elem.tenant}' received.")
         }
+
+        result
       }
   }
 

@@ -45,7 +45,7 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
 
       val documentBackupClient = stub[DocumentBackupClient]
       val documentServiceClient = stub[DocumentServiceClient]
-      (documentServiceClient.getTypes _).when("client", "tenant").returns(Future.successful(List("type1", "type2")))
+      (documentServiceClient.getTypes _).when("client", "tenant").returns(Future.successful(Set("type1", "type2")))
       (documentBackupClient.getDocuments _).when("client", "tenant", "type1")
         .returns(Future.successful(type1Stream))
       (documentBackupClient.getDocuments _).when("client", "tenant", "type2")
@@ -61,7 +61,7 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       val backupService = new BackupService(documentBackupClient, documentServiceClient, dstDir.pathAsString, "backup.json", true)
 
       // when
-      val result = backupService.runBackup(List(ClientTenant("client", "tenant", List()))).futureValue
+      val result = backupService.runBackup(List(ClientTenant("client", "tenant", Set()))).futureValue
 
       // then
       result mustBe Done

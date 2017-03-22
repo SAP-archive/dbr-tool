@@ -41,8 +41,8 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
       val documentServiceClient = stub[DocumentServiceClient]
 
-      (documentServiceClient.getTypes _).when("client1", "tenant1").returns(Future.successful(List("type1", "type2")))
-      (documentServiceClient.getTypes _).when("client1", "tenant2").returns(Future.successful(List("type1")))
+      (documentServiceClient.getTypes _).when("client1", "tenant1").returns(Future.successful(Set("type1", "type2")))
+      (documentServiceClient.getTypes _).when("client1", "tenant2").returns(Future.successful(Set("type1")))
 
       val (source, sink) = TestSource.probe[ClientTenant]
         .via(addTypes(documentServiceClient))
@@ -51,20 +51,23 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
       sink.request(5)
 
-      source.sendNext(ClientTenant("client1", "tenant1", List()))
-      source.sendNext(ClientTenant("client1", "tenant2", List()))
+      source.sendNext(ClientTenant("client1", "tenant1", Set()))
+      source.sendNext(ClientTenant("client1", "tenant2", Set()))
       source.sendComplete()
 
       sink.expectNextUnordered(
-        ClientTenant("client1", "tenant1", List("type1", "type2")),
-        ClientTenant("client1", "tenant2", List("type1"))
+        ClientTenant("client1", "tenant1", Set("type1", "type2")),
+        ClientTenant("client1", "tenant2", Set("type1"))
       )
       sink.expectComplete()
     }
 
-    "not get types when already provided" in {
+    "get types even if they are already provided and intersect them" in {
 
       val documentServiceClient = stub[DocumentServiceClient]
+
+      (documentServiceClient.getTypes _).when("client1", "tenant1").returns(Future.successful(Set("type2")))
+      (documentServiceClient.getTypes _).when("client1", "tenant2").returns(Future.successful(Set("type1")))
 
       val (source, sink) = TestSource.probe[ClientTenant]
         .via(addTypes(documentServiceClient))
@@ -73,17 +76,15 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
       sink.request(5)
 
-      source.sendNext(ClientTenant("client1", "tenant1", List("type1", "type2")))
-      source.sendNext(ClientTenant("client1", "tenant2", List("type1")))
+      source.sendNext(ClientTenant("client1", "tenant1", Set("type1", "type2")))
+      source.sendNext(ClientTenant("client1", "tenant2", Set("type1")))
       source.sendComplete()
 
       sink.expectNextUnordered(
-        ClientTenant("client1", "tenant1", List("type1", "type2")),
-        ClientTenant("client1", "tenant2", List("type1"))
+        ClientTenant("client1", "tenant1", Set("type2")),
+        ClientTenant("client1", "tenant2", Set("type1"))
       )
       sink.expectComplete()
-
-      (documentServiceClient.getTypes _).verify(*, *).never()
     }
 
     "add indexes when configured" in {
@@ -179,9 +180,9 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
       sink.request(5)
 
-      source.sendNext(ClientTenant("client1", "tenant1", List("type1", "type2")))
-      source.sendNext(ClientTenant("client1", "tenant2", List()))
-      source.sendNext(ClientTenant("client1", "tenant4", List("type1")))
+      source.sendNext(ClientTenant("client1", "tenant1", Set("type1", "type2")))
+      source.sendNext(ClientTenant("client1", "tenant2", Set()))
+      source.sendNext(ClientTenant("client1", "tenant4", Set("type1")))
       source.sendComplete()
 
       sink.expectNext(BackupType("client1", "tenant1", "type1"))

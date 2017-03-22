@@ -28,7 +28,7 @@ trait DocumentServiceClient {
    * @param tenant tenant using types
    * @return future with list of types
    */
-  def getTypes(client: String, tenant: String): Future[List[String]]
+  def getTypes(client: String, tenant: String): Future[Set[String]]
 
   /**
    * Returns list of indexes for given client, tenant and type.
