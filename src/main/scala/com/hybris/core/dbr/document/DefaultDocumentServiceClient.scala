@@ -11,6 +11,7 @@
  */
 package com.hybris.core.dbr.document
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding
@@ -39,10 +40,6 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
   private case class GetTypesResponse(types: List[String])
 
   private implicit val getTypesResponseDecoder: Decoder[GetTypesResponse] = deriveDecoder
-
-  private case class CreateIndexResponse(id: String)
-
-  private implicit val createIndexResponseDecoder: Decoder[CreateIndexResponse] = deriveDecoder
 
   private val authorizationHeader = token.map(t => Authorization(OAuth2BearerToken(t)))
 
@@ -102,7 +99,7 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       }
   }
 
-  override def createIndex(client: String, tenant: String, `type`: String, definition: IndexDefinition): Future[String] = {
+  override def createIndex(client: String, tenant: String, `type`: String, definition: IndexDefinition): Future[NotUsed] = {
 
     val entity = HttpEntity(ContentTypes.`application/json`, definition.asJson.pretty(customPrinter))
     val request = RequestBuilding
@@ -115,8 +112,8 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
     Http()
       .singleRequest(request)
       .flatMap {
-        case response if response.status.isSuccess() =>
-          Unmarshal(response).to[CreateIndexResponse].map(_.id)
+        case response if response.status.isSuccess() || response.status.equals(StatusCodes.Conflict) =>
+           Future.successful(NotUsed)
 
         case response =>
           response.entity.dataBytes.runFold(new String)((t, byte) ⇒ t + byte.utf8String).flatMap(msg ⇒ {

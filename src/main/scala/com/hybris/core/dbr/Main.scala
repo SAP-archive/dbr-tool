@@ -106,7 +106,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
   }
 
   private def doRestore(cliConfig: CliConfig, restoreDefinition: RestoreDefinition): Unit = {
-    logger.info(s"Starting restore of client: ${cliConfig.client}")
+    logger.info(s"Starting restore..")
 
     implicit val system = ActorSystem("dbr")
     implicit val materializer = ActorMaterializer()

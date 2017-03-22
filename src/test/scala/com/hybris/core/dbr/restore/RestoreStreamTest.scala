@@ -13,6 +13,7 @@ package com.hybris.core.dbr.restore
 
 import java.nio.file.Paths
 
+import akka.NotUsed
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{FileIO, Keep, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
@@ -155,7 +156,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       val documentServiceClient = stub[DocumentServiceClient]
       (documentServiceClient.createIndex _)
         .when("client", "tenant1", "type1", indexDefinition)
-        .returns(Future.successful("hwdp"))
+        .returns(Future.successful(NotUsed))
 
       val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
 

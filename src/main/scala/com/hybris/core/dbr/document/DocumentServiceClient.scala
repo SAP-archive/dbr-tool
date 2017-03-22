@@ -11,6 +11,7 @@
  */
 package com.hybris.core.dbr.document
 
+import akka.NotUsed
 import com.hybris.core.dbr.model.IndexDefinition
 
 import scala.concurrent.Future
@@ -48,6 +49,6 @@ trait DocumentServiceClient {
    * @param definition of index
    * @return Name of created index.
    */
-  def createIndex(client: String, tenant: String, `type`: String, definition: IndexDefinition): Future[String]
+  def createIndex(client: String, tenant: String, `type`: String, definition: IndexDefinition): Future[NotUsed]
 
 }

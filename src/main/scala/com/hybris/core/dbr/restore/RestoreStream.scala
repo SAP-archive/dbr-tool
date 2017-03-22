@@ -15,7 +15,7 @@ import java.nio.file.{Files, Paths}
 
 import akka.NotUsed
 import akka.event.slf4j.SLF4JLogging
-import akka.stream.scaladsl.{FileIO, Flow, JsonFraming, Source}
+import akka.stream.scaladsl.{FileIO, Flow, JsonFraming, Sink, Source}
 import akka.stream.{IOResult, Materializer}
 import akka.util.ByteString
 import com.hybris.core.dbr.config.{AppConfig, RestoreTypeDefinition}
@@ -88,9 +88,9 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
                                     executionContext: ExecutionContext) =
     Source(indexes)
       .mapAsync(Parallelism)(id ⇒ documentServiceClient.createIndex(rtd.client, rtd.tenant, rtd.`type`, id))
-      .runFold(List[String]())((acc, id) ⇒ id :: acc)
-      .map(res ⇒ {
-        log.info(s"${res.size} index(es) restored: ${res.mkString(", ")}")
+      .runWith(Sink.ignore)
+      .map(_ ⇒ {
+        log.info(s"Index(es) restored for '${rtd.tenant}' type '${rtd.`type`}'.")
         rtd
       })
 

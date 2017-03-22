@@ -11,6 +11,7 @@
  */
 package com.hybris.core.dbr.document
 
+import akka.NotUsed
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
@@ -100,14 +101,21 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
         val indexDefinition = IndexDefinition(Json.fromString("""{"a":1}"""), Json.Null)
         val result = client.createIndex("client", "createIndexTenant", "cats", indexDefinition).futureValue
 
-        result mustBe "newindex"
+        result mustBe NotUsed
+      }
+
+      "result ok index" in {
+        val indexDefinition = IndexDefinition(Json.fromString("""{"a":1}"""), Json.Null)
+        val result = client.createIndex("client", "createIndexTenant", "cats.conflict", indexDefinition).futureValue
+
+        result mustBe NotUsed
       }
 
       "create index with User-Agent header" in {
         val indexDefinition = IndexDefinition(Json.fromString("""{"a":1}"""), Json.fromString("""{"name": "test"}"""))
         val result = client.createIndex("client", "createIndexTenant", "cats.useragent", indexDefinition).futureValue
 
-        result mustBe "newindex"
+        result mustBe NotUsed
       }
 
       "get types without token" in {
@@ -117,7 +125,7 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
 
         val types = client.createIndex("client", "createIndexTenant", "cats.notoken", indexDefinition).futureValue
 
-        types mustBe "newindex"
+        types mustBe NotUsed
       }
 
       "handle bad response when getting types" in {
@@ -179,6 +187,9 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
       } ~
         path("cats.bad") {
           complete((StatusCodes.BadRequest, "bad request message"))
+        }~
+        path("cats.conflict") {
+          complete((StatusCodes.Conflict, "index already exists"))
         }
     }
   }

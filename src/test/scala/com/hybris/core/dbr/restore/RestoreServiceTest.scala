@@ -11,7 +11,7 @@
 */
 package com.hybris.core.dbr.restore
 
-import akka.Done
+import akka.{Done, NotUsed}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
@@ -110,7 +110,7 @@ class RestoreServiceTest extends BaseCoreTest {
 
       (documentServiceClient.createIndex _)
         .expects("client", "tenant", "type1", indexDefinition)
-        .returns(Future.successful("hwdp"))
+        .returns(Future.successful(NotUsed))
       //@formatter:on
 
       val restoreService = new RestoreService(documentBackupClient, documentServiceClient, restoreDir.pathAsString)
