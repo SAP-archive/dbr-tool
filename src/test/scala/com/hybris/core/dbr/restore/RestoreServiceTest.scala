@@ -21,6 +21,7 @@ import com.hybris.core.dbr.config.RestoreTypeDefinition
 import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient, InsertResult}
 import com.hybris.core.dbr.model.IndexDefinition
 import io.circe.Json
+import io.circe.parser.parse
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.duration.DurationInt
@@ -37,8 +38,9 @@ class RestoreServiceTest extends BaseCoreTest {
 
     "restore data without index creation" in {
       // given
-      val indexDefinitionA1 = IndexDefinition(Json.fromString("""{"a1": 1}"""), Json.fromString("""{"name": "test"}"""))
-      val indexDefinitionA3 = IndexDefinition(Json.fromString("""{"a3": 1}"""), Json.fromString("""{"name": "test"}"""))
+      val indexDefinitionA1 = IndexDefinition(parse("""{"a1": 1}""").getOrElse(Json.Null), parse("""{"name": "test"}""").getOrElse(Json.Null))
+      val indexDefinitionA3 = IndexDefinition(parse("""{"a3": 1}""").getOrElse(Json.Null), parse("""{"name": "test"}""").getOrElse(Json.Null))
+
       val types = List(
         RestoreTypeDefinition("client", "tenant", "type1", "file1.json", Some(List(indexDefinitionA1))),
         RestoreTypeDefinition("client", "tenant", "type2", "file2.json", Some(List(indexDefinitionA3)))
@@ -87,7 +89,7 @@ class RestoreServiceTest extends BaseCoreTest {
 
     "restore data with index creation" in {
       // given
-      val indexDefinition = IndexDefinition(Json.fromString("""{"a1": 1}"""), Json.fromString("""{"name": "test"}"""))
+      val indexDefinition = IndexDefinition(parse("""{"a1": 1}""").getOrElse(Json.Null), parse("""{"name": "test"}""").getOrElse(Json.Null))
       val types = List(RestoreTypeDefinition("client", "tenant", "type1", "file1.json", Some(List(indexDefinition))))
 
       val restoreDir = File.newTemporaryDirectory()
