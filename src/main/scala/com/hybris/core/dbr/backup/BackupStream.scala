@@ -70,7 +70,7 @@ trait BackupStream extends SLF4JLogging {
           documentServiceClient
             .getIndexes(btr.client, btr.tenant, btr.`type`)
             .map(l ⇒ l.filterNot(isIdIndexDefinition))
-            .map(indexes ⇒ btr.copy(indexes = Some(indexes)))
+            .map(indexes ⇒ btr.copy(indexes = if (indexes.isEmpty) None else Some(indexes)))
         } else {
           Future.successful(btr)
         }

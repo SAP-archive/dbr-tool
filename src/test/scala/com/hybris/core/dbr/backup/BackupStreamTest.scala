@@ -130,12 +130,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
         parse("""{"name":"new_id_index"}""").getOrElse(Json.Null)
       )
 
-      val normalIndexDefinition = IndexDefinition(
-        parse("""{"test":"text"}""").getOrElse(Json.Null),
-        parse("""{"name":"text"}""").getOrElse(Json.Null)
-      )
-
-      (documentServiceClient.getIndexes _).when("client", "tenant", "type").returns(Future.successful(List(idIndexDefinition, normalIndexDefinition)))
+      (documentServiceClient.getIndexes _).when("client", "tenant", "type").returns(Future.successful(List(idIndexDefinition)))
 
       val (source, sink) = TestSource.probe[BackupTypeResult]
         .via(addIndexes(documentServiceClient, shouldSaveIndexDefinition = true))
@@ -147,7 +142,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       source.sendNext(BackupTypeResult("client", "tenant", "type", "file", None))
       source.sendComplete()
 
-      sink.expectNext(BackupTypeResult("client", "tenant", "type", "file", Some(List(normalIndexDefinition))))
+      sink.expectNext(BackupTypeResult("client", "tenant", "type", "file", None))
 
       sink.expectComplete()
     }
