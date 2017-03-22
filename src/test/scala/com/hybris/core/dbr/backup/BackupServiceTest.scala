@@ -51,8 +51,8 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       (documentBackupClient.getDocuments _).when("client", "tenant", "type2")
         .returns(Future.successful(type2Stream))
 
-      val keys = parse("""{ "_id": 1 }""").getOrElse(Json.Null)
-      val options = parse("""{ "name":"_id_" }""").getOrElse(Json.Null)
+      val keys = parse("""{ "field1": 1 }""").getOrElse(Json.Null)
+      val options = parse("""{ "name":"field1Index" }""").getOrElse(Json.Null)
       val indexDefinition = IndexDefinition(keys, options)
 
       (documentServiceClient.getIndexes _).when("client", "tenant", "type1").returns(Future.successful(List(indexDefinition)))
@@ -72,12 +72,12 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       val rtc1 = restoreConfig.definitions
         .find(rtc => rtc.client == "client" && rtc.tenant == "tenant" && rtc.`type` == "type1").value
       rtc1.file must not be empty
-      rtc1.indexes.get.head.noSpaces mustBe """{"keys":{"_id":1},"options":{"name":"_id_"}}"""
+      rtc1.indexes.get.head.noSpaces mustBe """{"keys":{"field1":1},"options":{"name":"field1Index"}}"""
 
       val rtc2 = restoreConfig.definitions
         .find(rtc => rtc.client == "client" && rtc.tenant == "tenant" && rtc.`type` == "type2").value
       rtc2.file must not be empty
-      rtc2.indexes.get.head.noSpaces mustBe """{"keys":{"_id":1},"options":{"name":"_id_"}}"""
+      rtc2.indexes.get.head.noSpaces mustBe """{"keys":{"field1":1},"options":{"name":"field1Index"}}"""
 
       val file1Content = File(s"${dstDir.pathAsString}/${rtc1.file}").contentAsString
       file1Content mustBe """[{"type1":1},{"type1":2}]"""
