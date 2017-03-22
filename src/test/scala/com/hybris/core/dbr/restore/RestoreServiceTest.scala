@@ -19,6 +19,7 @@ import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.RestoreTypeDefinition
 import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient, InsertResult}
+import com.hybris.core.dbr.model.IndexDefinition
 import io.circe.Json
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -28,8 +29,7 @@ import scala.concurrent.{Await, Future}
 class RestoreServiceTest extends BaseCoreTest {
 
   implicit val materializer = ActorMaterializer()
-
-  import system.dispatcher
+  implicit val ec = system.dispatcher
 
   implicit val defaultPatience = PatienceConfig(timeout = Span(5, Seconds), interval = Span(250, Millis))
 
@@ -37,9 +37,11 @@ class RestoreServiceTest extends BaseCoreTest {
 
     "restore data without index creation" in {
       // given
+      val indexDefinitionA1 = IndexDefinition(Json.fromString("""{"a1": 1}"""), Json.fromString("""{"name": "test"}"""))
+      val indexDefinitionA3 = IndexDefinition(Json.fromString("""{"a3": 1}"""), Json.fromString("""{"name": "test"}"""))
       val types = List(
-        RestoreTypeDefinition("client", "tenant", "type1", "file1.json", Some(List(Json.fromString("""{keys: {"a1": 1}}""")))),
-        RestoreTypeDefinition("client", "tenant", "type2", "file2.json", Some(List(Json.fromString("""{keys: {"a3": 1}}"""))))
+        RestoreTypeDefinition("client", "tenant", "type1", "file1.json", Some(List(indexDefinitionA1))),
+        RestoreTypeDefinition("client", "tenant", "type2", "file2.json", Some(List(indexDefinitionA3)))
       )
 
       val restoreDir = File.newTemporaryDirectory()
@@ -76,7 +78,7 @@ class RestoreServiceTest extends BaseCoreTest {
       val restoreService = new RestoreService(documentBackupClient, documentServiceClient, restoreDir.pathAsString)
 
       // when
-      val result = restoreService.restore(types, true).futureValue
+      val result = restoreService.restore(types, skipIndexes = true).futureValue
 
       // then (+ mock expectations)
       result mustBe Done
@@ -85,7 +87,7 @@ class RestoreServiceTest extends BaseCoreTest {
 
     "restore data with index creation" in {
       // given
-      val indexDefinition = Json.fromString("""{keys: {"a1": 1}}""")
+      val indexDefinition = IndexDefinition(Json.fromString("""{"a1": 1}"""), Json.fromString("""{"name": "test"}"""))
       val types = List(RestoreTypeDefinition("client", "tenant", "type1", "file1.json", Some(List(indexDefinition))))
 
       val restoreDir = File.newTemporaryDirectory()
@@ -107,14 +109,14 @@ class RestoreServiceTest extends BaseCoreTest {
         .returns(Future.successful(InsertResult(1,1,0)))
 
       (documentServiceClient.createIndex _)
-        .expects("client", "tenant", "type1", indexDefinition.toString)
+        .expects("client", "tenant", "type1", indexDefinition)
         .returns(Future.successful("hwdp"))
       //@formatter:on
 
       val restoreService = new RestoreService(documentBackupClient, documentServiceClient, restoreDir.pathAsString)
 
       // when
-      val result = restoreService.restore(types, false).futureValue
+      val result = restoreService.restore(types, skipIndexes = false).futureValue
 
       // then (+ mock expectations)
       result mustBe Done

@@ -13,6 +13,7 @@ package com.hybris.core.dbr.document
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.HttpEncodings.identity
 import akka.http.scaladsl.model.headers.{`User-Agent`, _}
@@ -22,8 +23,9 @@ import com.hybris.core.dbr.config.BuildInfo
 import com.hybris.core.dbr.exceptions.DocumentServiceClientException
 import com.hybris.core.dbr.model.IndexDefinition
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
-import io.circe.Decoder
-import io.circe.generic.semiauto.deriveDecoder
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+import io.circe.syntax.EncoderOps
+import io.circe.{Decoder, Encoder, Printer}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -45,6 +47,8 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
   private val authorizationHeader = token.map(t => Authorization(OAuth2BearerToken(t)))
 
   private implicit val indexDefinitionDecoder: Decoder[IndexDefinition] = deriveDecoder
+
+  private implicit val indexDefinitionEncoder: Encoder[IndexDefinition] = deriveEncoder
 
   override def getTypes(client: String, tenant: String): Future[List[String]] = {
 
@@ -98,17 +102,15 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
       }
   }
 
-  override def createIndex(client: String, tenant: String, `type`: String, definition: String): Future[String] = {
+  override def createIndex(client: String, tenant: String, `type`: String, definition: IndexDefinition): Future[String] = {
 
-    val entity = HttpEntity(ContentTypes.`application/json`, definition)
-
-    val request = HttpRequest(
-      method = HttpMethods.POST,
-      entity = entity,
-      uri = s"$documentServiceUrl/$tenant/$client/indexes/${`type`}",
-      headers = `Accept-Encoding`(identity) ::
-        `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
-        getHeaders(authorizationHeader, client))
+    val entity = HttpEntity(ContentTypes.`application/json`, definition.asJson.pretty(customPrinter))
+    val request = RequestBuilding
+      .Post(s"$documentServiceUrl/$tenant/$client/indexes/${`type`}", entity)
+      .withHeaders(
+        `Accept-Encoding`(identity) ::
+          `User-Agent`(s"${BuildInfo.name}-${BuildInfo.version}") ::
+          getHeaders(authorizationHeader, client))
 
     Http()
       .singleRequest(request)
@@ -133,4 +135,6 @@ class DefaultDocumentServiceClient(documentServiceUrl: String,
           Future.failed(DocumentServiceClientException(msg))
       }
   }
+
+  private val customPrinter = Printer.noSpaces.copy(dropNullKeys = true)
 }

@@ -48,6 +48,6 @@ trait DocumentServiceClient {
    * @param definition of index
    * @return Name of created index.
    */
-  def createIndex(client: String, tenant: String, `type`: String, definition: String): Future[String]
+  def createIndex(client: String, tenant: String, `type`: String, definition: IndexDefinition): Future[String]
 
 }

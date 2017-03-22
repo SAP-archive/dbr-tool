@@ -21,7 +21,7 @@ import akka.util.ByteString
 import com.hybris.core.dbr.config.{AppConfig, RestoreTypeDefinition}
 import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
-import io.circe.Json
+import com.hybris.core.dbr.model.IndexDefinition
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -83,11 +83,11 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
       }
   }
 
-  private def createIndexesInternal(indexes: List[Json], documentServiceClient: DocumentServiceClient, rtd: RestoreTypeDefinition)
+  private def createIndexesInternal(indexes: List[IndexDefinition], documentServiceClient: DocumentServiceClient, rtd: RestoreTypeDefinition)
                                    (implicit materializer: Materializer,
                                     executionContext: ExecutionContext) =
     Source(indexes)
-      .mapAsync(Parallelism)(id ⇒ documentServiceClient.createIndex(rtd.client, rtd.tenant, rtd.`type`, id.toString))
+      .mapAsync(Parallelism)(id ⇒ documentServiceClient.createIndex(rtd.client, rtd.tenant, rtd.`type`, id))
       .runFold(List[String]())((acc, id) ⇒ id :: acc)
       .map(res ⇒ {
         log.info(s"${res.size} index(es) restored: ${res.mkString(", ")}")

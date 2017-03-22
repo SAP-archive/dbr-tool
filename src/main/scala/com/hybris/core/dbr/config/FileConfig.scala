@@ -14,7 +14,7 @@ package com.hybris.core.dbr.config
 import cats.implicits._
 import com.hybris.core.dbr.config.FileConfig._
 import com.hybris.core.dbr.file.FileOps._
-import com.hybris.core.dbr.model.InternalAppError
+import com.hybris.core.dbr.model.{IndexDefinition, InternalAppError}
 import io.circe._
 import io.circe.generic.semiauto._
 
@@ -67,6 +67,8 @@ object FileConfig {
   implicit val backupConfigDecoder: Decoder[BackupConfig] = deriveDecoder
 
   implicit val backupTenantConfigDecoder: Decoder[BackupTenantConfig] = deriveDecoder
+
+  implicit val indexDefinitionDecoder: Decoder[IndexDefinition] = deriveDecoder
 
   implicit val restoreTypeDefinition: Decoder[RestoreTypeDefinition] = deriveDecoder
 

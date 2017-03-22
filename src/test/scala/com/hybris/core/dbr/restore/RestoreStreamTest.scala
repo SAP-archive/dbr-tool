@@ -22,6 +22,7 @@ import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.RestoreTypeDefinition
 import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient, InsertResult}
 import com.hybris.core.dbr.exceptions.RestoreException
+import com.hybris.core.dbr.model.IndexDefinition
 import io.circe.Json
 
 import scala.concurrent.{Await, Future}
@@ -47,7 +48,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
           |]
         """.stripMargin
 
-      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
+      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
       val stream =
         configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
@@ -82,7 +83,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
            |]
             """.stripMargin
 
-      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
+      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
       val stream =
         configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName1, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
@@ -101,7 +102,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       val testDir = File.newTemporaryDirectory()
       val fileName = randomName
 
-      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
+      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
       val stream =
         configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
@@ -128,7 +129,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .when("client", "tenant1", "type1", fileSource2)
         .returns(Future.successful(InsertResult(1, 1, 0)))
 
-      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
+      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
       val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
 
       val (source, sink) = TestSource.probe[Source[ByteString, _]]
@@ -149,11 +150,11 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
     "create indexes" in {
       // given
-      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
+      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
 
       val documentServiceClient = stub[DocumentServiceClient]
       (documentServiceClient.createIndex _)
-        .when("client", "tenant1", "type1", indexDefinition.toString)
+        .when("client", "tenant1", "type1", indexDefinition)
         .returns(Future.successful("hwdp"))
 
       val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
@@ -187,7 +188,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .when("client", "tenant1", "type1", fileSource)
         .returns(Future.failed(new RuntimeException("some error")))
 
-      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
+      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
       val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
 
       val (source, sink) = TestSource.probe[Source[ByteString, _]]
@@ -210,7 +211,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       //given
       val s = Source.repeat(InsertResult(1, 1, 0)).take(2001)
 
-      val indexDefinition = Json.fromString("""{keys: {"file1": 1}}""")
+      val indexDefinition = IndexDefinition(Json.fromString("""{"file1": 1}"""), Json.fromString("""{"name": "test"}"""))
       val rdc = RestoreTypeDefinition("client", "tenant", "type", "a", Some(List(indexDefinition)))
 
       //when

@@ -20,6 +20,8 @@ import akka.stream.ActorMaterializer
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.BuildInfo
 import com.hybris.core.dbr.exceptions.DocumentServiceClientException
+import com.hybris.core.dbr.model.IndexDefinition
+import io.circe.Json
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.Await
@@ -95,14 +97,15 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
     "creating index" should {
 
       "create index" in {
-        val result = client.createIndex("client", "createIndexTenant", "cats", """{"keys": {"a": 1}}""").futureValue
+        val indexDefinition = IndexDefinition(Json.fromString("""{"a":1}"""), Json.Null)
+        val result = client.createIndex("client", "createIndexTenant", "cats", indexDefinition).futureValue
 
         result mustBe "newindex"
       }
 
       "create index with User-Agent header" in {
-
-        val result = client.createIndex("client", "createIndexTenant", "cats.useragent", """{"keys": {"a": 1}}""").futureValue
+        val indexDefinition = IndexDefinition(Json.fromString("""{"a":1}"""), Json.fromString("""{"name": "test"}"""))
+        val result = client.createIndex("client", "createIndexTenant", "cats.useragent", indexDefinition).futureValue
 
         result mustBe "newindex"
       }
@@ -110,15 +113,16 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
       "get types without token" in {
 
         val client = new DefaultDocumentServiceClient("http://localhost:9877", None)
+        val indexDefinition = IndexDefinition(Json.fromString("""{"a":1}"""), Json.fromString("""{"name": "test"}"""))
 
-        val types = client.createIndex("client", "createIndexTenant", "cats.notoken", """{"keys": {"a": 1}}""").futureValue
+        val types = client.createIndex("client", "createIndexTenant", "cats.notoken", indexDefinition).futureValue
 
         types mustBe "newindex"
       }
 
       "handle bad response when getting types" in {
-
-        val result = client.createIndex("client", "createIndexTenant", "cats.bad", """{"keys": {"a": 1}}""").failed.futureValue
+        val indexDefinition = IndexDefinition(Json.fromString("""{"a":1}"""), Json.fromString("""{"name": "test"}"""))
+        val result = client.createIndex("client", "createIndexTenant", "cats.bad", indexDefinition).failed.futureValue
 
         result mustBe a[DocumentServiceClientException]
         result.asInstanceOf[DocumentServiceClientException].message must include("bad request message")
@@ -126,10 +130,10 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
       }
 
       "handle failed request" in {
-
+        val indexDefinition = IndexDefinition(Json.fromString("""{"a": 1}"""), Json.fromString("""{"name": "test"}"""))
         val client = new DefaultDocumentServiceClient("http://localhost:19382", None)
 
-        whenReady(client.createIndex("client", "createIndexTenant", "cats.bad", """{"keys": {"a": 1}}""").failed) { result ⇒
+        whenReady(client.createIndex("client", "createIndexTenant", "cats.bad", indexDefinition).failed) { result ⇒
           result mustBe a[DocumentServiceClientException]
         }
       }
@@ -145,7 +149,7 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
       path("cats") {
         headerValuePF(extractToken) { token =>
           entity(as[String]) { entity ⇒
-            if (token == "token" && entity == """{"keys": {"a": 1}}""") {
+            if (token == "token" && entity == """{"keys":"{\"a\":1}"}""") {
               complete(HttpEntity(ContentTypes.`application/json`, """{"id" : "newindex"}"""))
             } else {
               complete(StatusCodes.BadRequest)

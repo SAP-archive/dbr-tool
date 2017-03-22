@@ -22,7 +22,7 @@ import better.files.File
 import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient}
 import com.hybris.core.dbr.model._
 import io.circe._
-import io.circe.generic.semiauto._
+import io.circe.generic.semiauto.deriveEncoder
 import io.circe.syntax.EncoderOps
 
 import scala.concurrent.{ExecutionContext, Future}

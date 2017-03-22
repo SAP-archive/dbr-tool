@@ -72,12 +72,14 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       val rtc1 = restoreConfig.definitions
         .find(rtc => rtc.client == "client" && rtc.tenant == "tenant" && rtc.`type` == "type1").value
       rtc1.file must not be empty
-      rtc1.indexes.get.head.noSpaces mustBe """{"keys":{"field1":1},"options":{"name":"field1Index"}}"""
+      rtc1.indexes.get.head.keys.noSpaces mustBe """{"field1":1}"""
+      rtc1.indexes.get.head.options.noSpaces mustBe """{"name":"field1Index"}"""
 
       val rtc2 = restoreConfig.definitions
         .find(rtc => rtc.client == "client" && rtc.tenant == "tenant" && rtc.`type` == "type2").value
       rtc2.file must not be empty
-      rtc2.indexes.get.head.noSpaces mustBe """{"keys":{"field1":1},"options":{"name":"field1Index"}}"""
+      rtc2.indexes.get.head.keys.noSpaces mustBe """{"field1":1}"""
+      rtc2.indexes.get.head.options.noSpaces mustBe """{"name":"field1Index"}"""
 
       val file1Content = File(s"${dstDir.pathAsString}/${rtc1.file}").contentAsString
       file1Content mustBe """[{"type1":1},{"type1":2}]"""
