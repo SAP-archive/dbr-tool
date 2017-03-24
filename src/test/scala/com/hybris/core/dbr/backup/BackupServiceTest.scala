@@ -58,7 +58,7 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       (documentServiceClient.getIndexes _).when("client", "tenant", "type1").returns(Future.successful(List(indexDefinition)))
       (documentServiceClient.getIndexes _).when("client", "tenant", "type2").returns(Future.successful(List(indexDefinition)))
 
-      val backupService = new BackupService(documentBackupClient, documentServiceClient, dstDir.pathAsString, "backup.json", true)
+      val backupService = new BackupService(documentBackupClient, documentServiceClient, dstDir.pathAsString, "backup.json", false)
 
       // when
       val result = backupService.runBackup(List(ClientTenant("client", "tenant", Set()))).futureValue
@@ -105,7 +105,7 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       (documentBackupClient.getDocuments _).when("client", "tenant", "type2")
         .returns(Future.successful(type2Stream))
 
-      val backupService = new BackupService(documentBackupClient, documentServiceClient, dstDir.pathAsString, "backup.json", false)
+      val backupService = new BackupService(documentBackupClient, documentServiceClient, dstDir.pathAsString, "backup.json", true)
 
       // when
       val result = backupService.runBackup(List(ClientTenant("client", "tenant", Set()))).futureValue

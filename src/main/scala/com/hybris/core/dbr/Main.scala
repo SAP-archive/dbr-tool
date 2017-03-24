@@ -73,7 +73,7 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
 
         val backupDestinationDir = s"${cliConfig.backupDestinationDir}/backup-$timestamp"
         FileOps.prepareEmptyDir(backupDestinationDir)
-        val backupJob = new BackupService(documentBackupClient, documentServiceClient, backupDestinationDir, summaryFileName, !cliConfig.skipIndexes)
+        val backupJob = new BackupService(documentBackupClient, documentServiceClient, backupDestinationDir, summaryFileName, cliConfig.skipIndexes)
 
         val cts = backupConfig.tenants.map(t => ClientTenant(cliConfig.client, t.tenant, t.types.getOrElse(Set[String]())))
 
