@@ -105,7 +105,7 @@ class DefaultDocumentServiceClientTest extends BaseCoreTest {
         result mustBe NotUsed
       }
 
-      "result ok index" in {
+      "return ok when index already exists" in {
         val indexDefinition = IndexDefinition(parse("""{"a": 1}""").getOrElse(Json.Null), Json.Null)
         val result = client.createIndex("client", "createIndexTenant", "cats.conflict", indexDefinition).futureValue
 

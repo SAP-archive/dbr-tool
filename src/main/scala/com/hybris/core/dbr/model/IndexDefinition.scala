@@ -16,7 +16,9 @@ import io.circe.Json
 /**
  * Container for index from Document service.
  *
- * @param keys index keys
+ * @param keys    index keys
  * @param options index options
  */
-case class IndexDefinition(keys: Json, options: Json)
+case class IndexDefinition(keys: Json, options: Json) {
+  val isIdIndexDefinition: Boolean = keys.hcursor.fieldSet.exists(s ⇒ s.forall(_.equals("_id")))
+}

@@ -59,23 +59,16 @@ trait BackupStream extends SLF4JLogging {
       }
   }
 
-  def addIndexes(documentServiceClient: DocumentServiceClient, shouldSaveIndexDefinition: Boolean)
+  def addIndexes(documentServiceClient: DocumentServiceClient)
                 (implicit executionContext: ExecutionContext): Flow[BackupTypeResult, BackupTypeResult, NotUsed] = {
     Flow[BackupTypeResult]
       .mapAsync(Parallelism) { btr ⇒
-        if (shouldSaveIndexDefinition) {
-          documentServiceClient
-            .getIndexes(btr.client, btr.tenant, btr.`type`)
-            .map(l ⇒ l.filterNot(isIdIndexDefinition))
-            .map(indexes ⇒ btr.copy(indexes = if (indexes.isEmpty) None else Some(indexes)))
-        } else {
-          Future.successful(btr)
-        }
+        documentServiceClient
+          .getIndexes(btr.client, btr.tenant, btr.`type`)
+          .map(l ⇒ l.filterNot(_.isIdIndexDefinition))
+          .map(indexes ⇒ btr.copy(indexes = if (indexes.isEmpty) None else Some(indexes)))
       }
   }
-
-  private val isIdIndexDefinition: IndexDefinition ⇒ Boolean =
-    i ⇒ i.keys.hcursor.fieldSet.exists(s ⇒ s.forall(_.equals("_id")))
 
   val flattenTypes: Flow[ClientTenant, BackupType, NotUsed] = {
     Flow[ClientTenant]

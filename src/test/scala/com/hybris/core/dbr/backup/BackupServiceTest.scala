@@ -88,6 +88,49 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       file2Content mustBe """[{"type2":1}]"""
 
     }
+
+    "backup data without indexes" in {
+
+      // given
+      val dstDir = File.newTemporaryDirectory()
+
+      val type1Stream = Source(List("[", """{"type1":1}""", ",", """{"type1":2}""", "]")).map(ByteString(_))
+      val type2Stream = Source(List("[", """{"type2":1}""", "]")).map(ByteString(_))
+
+      val documentBackupClient = stub[DocumentBackupClient]
+      val documentServiceClient = stub[DocumentServiceClient]
+      (documentServiceClient.getTypes _).when("client", "tenant").returns(Future.successful(Set("type1", "type2")))
+      (documentBackupClient.getDocuments _).when("client", "tenant", "type1")
+        .returns(Future.successful(type1Stream))
+      (documentBackupClient.getDocuments _).when("client", "tenant", "type2")
+        .returns(Future.successful(type2Stream))
+
+      val backupService = new BackupService(documentBackupClient, documentServiceClient, dstDir.pathAsString, "backup.json", false)
+
+      // when
+      val result = backupService.runBackup(List(ClientTenant("client", "tenant", Set()))).futureValue
+
+      // then
+      result mustBe Done
+
+      val restoreConfig = readRestoreDefinition(dstDir.pathAsString + "/backup.json").right.value
+      restoreConfig.definitions must have size 2
+
+      val rtc1 = restoreConfig.definitions
+        .find(rtc => rtc.client == "client" && rtc.tenant == "tenant" && rtc.`type` == "type1").value
+      rtc1.file must not be empty
+
+      val rtc2 = restoreConfig.definitions
+        .find(rtc => rtc.client == "client" && rtc.tenant == "tenant" && rtc.`type` == "type2").value
+      rtc2.file must not be empty
+
+      val file1Content = File(s"${dstDir.pathAsString}/${rtc1.file}").contentAsString
+      file1Content mustBe """[{"type1":1},{"type1":2}]"""
+
+      val file2Content = File(s"${dstDir.pathAsString}/${rtc2.file}").contentAsString
+      file2Content mustBe """[{"type2":1}]"""
+
+    }
   }
 
 }

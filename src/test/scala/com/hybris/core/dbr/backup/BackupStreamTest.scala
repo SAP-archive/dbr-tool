@@ -87,7 +87,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       sink.expectComplete()
     }
 
-    "add indexes when configured" in {
+    "add indexes" in {
 
       val documentServiceClient = stub[DocumentServiceClient]
 
@@ -104,7 +104,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       (documentServiceClient.getIndexes _).when("client1", "tenant1", "type2").returns(Future.successful(List(indexDefinition1, indexDefinition2)))
 
       val (source, sink) = TestSource.probe[BackupTypeResult]
-        .via(addIndexes(documentServiceClient, shouldSaveIndexDefinition = true))
+        .via(addIndexes(documentServiceClient))
         .toMat(TestSink.probe[BackupTypeResult])(Keep.both)
         .run()
 
@@ -134,7 +134,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       (documentServiceClient.getIndexes _).when("client", "tenant", "type").returns(Future.successful(List(idIndexDefinition)))
 
       val (source, sink) = TestSource.probe[BackupTypeResult]
-        .via(addIndexes(documentServiceClient, shouldSaveIndexDefinition = true))
+        .via(addIndexes(documentServiceClient))
         .toMat(TestSink.probe[BackupTypeResult])(Keep.both)
         .run()
 
@@ -144,29 +144,6 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
       source.sendComplete()
 
       sink.expectNext(BackupTypeResult("client", "tenant", "type", "file", None))
-
-      sink.expectComplete()
-    }
-
-    "not add indexes when not configured" in {
-
-      val documentServiceClient = stub[DocumentServiceClient]
-
-      val (source, sink) = TestSource.probe[BackupTypeResult]
-        .via(addIndexes(documentServiceClient, shouldSaveIndexDefinition = false))
-        .toMat(TestSink.probe[BackupTypeResult])(Keep.both)
-        .run()
-
-      sink.request(5)
-
-      source.sendNext(BackupTypeResult("client1", "tenant1", "type1", "file", None))
-      source.sendNext(BackupTypeResult("client1", "tenant1", "type2", "file", None))
-      source.sendComplete()
-
-      sink.expectNextUnordered(
-        BackupTypeResult("client1", "tenant1", "type1", "file", None),
-        BackupTypeResult("client1", "tenant1", "type2", "file", None)
-      )
 
       sink.expectComplete()
     }

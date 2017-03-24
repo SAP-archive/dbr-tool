@@ -34,7 +34,7 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
                     materializer: Materializer): Flow[RestoreTypeDefinition, RestoreTypeDefinition, NotUsed] = {
     Flow[RestoreTypeDefinition]
       .mapAsync(Parallelism) { rtd ⇒
-        rtd.indexes.map(i ⇒ i.filterNot(isIdIndexDefinition)) match {
+        rtd.indexes.map(i ⇒ i.filterNot(_.isIdIndexDefinition)) match {
           case Some(indexes) if indexes.nonEmpty ⇒
             createIndexesInternal(indexes, documentServiceClient, rtd)
 
@@ -82,9 +82,6 @@ trait RestoreStream extends SLF4JLogging with AppConfig {
         }
       }
   }
-
-  private val isIdIndexDefinition: IndexDefinition ⇒ Boolean =
-    i ⇒ i.keys.hcursor.fieldSet.exists(s ⇒ s.forall(_.equals("_id")))
 
   private def createIndexesInternal(indexes: List[IndexDefinition], documentServiceClient: DocumentServiceClient, rtd: RestoreTypeDefinition)
                                    (implicit materializer: Materializer,

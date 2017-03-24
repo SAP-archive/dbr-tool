@@ -23,18 +23,25 @@ class BackupService(documentBackupClient: DocumentBackupClient,
                     documentServiceClient: DocumentServiceClient,
                     destinationDir: String,
                     summaryFileName: String,
-                    backupIndex: Boolean)
+                    backupIndexes: Boolean)
                    (implicit executionContext: ExecutionContext, materializer: Materializer) extends BackupStream {
 
   def runBackup(cts: List[ClientTenant]): Future[Done] = createGraph(cts).run()
 
   private def createGraph(cts: List[ClientTenant]): RunnableGraph[Future[Done]] = {
-    Source(cts)
+    val startStream = Source(cts)
       .via(addTypes(documentServiceClient))
       .via(flattenTypes)
       .via(addDocuments(documentBackupClient))
       .via(writeToFiles(destinationDir))
-      .via(addIndexes(documentServiceClient, backupIndex))
+
+    val indexStream = if (backupIndexes) {
+      startStream.via(addIndexes(documentServiceClient))
+    } else {
+      startStream
+    }
+
+    indexStream
       .via(writeSummary(destinationDir, summaryFileName))
       .toMat(Sink.head)(Keep.right)
   }
