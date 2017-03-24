@@ -130,6 +130,7 @@ class BackupServiceTest extends BaseCoreTest with FileConfig {
       val file2Content = File(s"${dstDir.pathAsString}/${rtc2.file}").contentAsString
       file2Content mustBe """[{"type2":1}]"""
 
+      (documentServiceClient.getIndexes _).verify(*, *, *).never()
     }
   }
 
