@@ -25,15 +25,14 @@ import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient
 import com.hybris.core.dbr.exceptions.RestoreException
 import com.hybris.core.dbr.model.IndexDefinition
 import io.circe.Json
-import io.circe.parser._
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
   implicit val materializer = ActorMaterializer()
 
-  implicit val ec = system.dispatcher
+  implicit val ec: ExecutionContext = system.dispatcher
 
   "RestoreStream" should {
 
@@ -50,7 +49,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
           |]
         """.stripMargin
 
-      val indexDefinition = IndexDefinition(parse("""{"file1": 1}""").getOrElse(Json.Null), parse("""{"name": "test"}""").getOrElse(Json.Null))
+      val indexDefinition = IndexDefinition(toJson("""{"file1": 1}"""), toJson("""{"name": "test"}"""))
       val stream =
         configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
@@ -86,7 +85,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
             """.stripMargin
 
 
-      val indexDefinition = IndexDefinition(parse("""{"file1": 1}""").getOrElse(Json.Null), parse("""{"name": "test"}""").getOrElse(Json.Null))
+      val indexDefinition = IndexDefinition(toJson("""{"file1": 1}"""), toJson("""{"name": "test"}"""))
       val stream =
         configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName1, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
@@ -105,10 +104,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       val testDir = File.newTemporaryDirectory()
       val fileName = randomName
 
-      val indexDefinition = IndexDefinition(
-        parse("""{"file1": 1}""").getOrElse(Json.Null),
-        parse("""{"name": "test"}""").getOrElse(Json.Null)
-      )
+      val indexDefinition = IndexDefinition(toJson("""{"file1": 1}"""), toJson("""{"name": "test"}"""))
       val stream =
         configToFileChunksSource(testDir.pathAsString, RestoreTypeDefinition("client", "tenant1", "type1", fileName, Some(List(indexDefinition))))
           .toMat(TestSink.probe[Source[ByteString, _]])(Keep.right)
@@ -135,10 +131,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .when("client", "tenant1", "type1", fileSource2)
         .returns(Future.successful(InsertResult(1, 1, 0)))
 
-      val indexDefinition = IndexDefinition(
-        parse("""{"file1": 1}""").getOrElse(Json.Null),
-        parse("""{"name": "test"}""").getOrElse(Json.Null)
-      )
+      val indexDefinition = IndexDefinition(toJson("""{"file1": 1}"""), toJson("""{"name": "test"}"""))
 
       val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
 
@@ -160,14 +153,8 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
     "create indexes" in {
       // given
-      val indexDefinition1 = IndexDefinition(
-        parse("""{"file1": 2}""").getOrElse(Json.Null),
-        parse("""{"name": "test"}""").getOrElse(Json.Null)
-      )
-      val indexDefinition2 = IndexDefinition(
-        parse("""{"file1": 2}""").getOrElse(Json.Null),
-        parse("""{"name": "test"}""").getOrElse(Json.Null)
-      )
+      val indexDefinition1 = IndexDefinition(toJson("""{"file1": 2}"""), toJson("""{"name": "test"}"""))
+      val indexDefinition2 = IndexDefinition(toJson("""{"file1": 2}"""), toJson("""{"name": "test"}"""))
 
       val documentServiceClient = mock[DocumentServiceClient]
 
@@ -201,12 +188,38 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .expectComplete()
     }
 
+    "create indexes with fixed weights" in {
+      // given
+      val indexDef = IndexDefinition(toJson("""{"file1": 2}"""), toJson("""{"name": "test", "weights": {"$all" : 1}}"""))
+      val expectedIndexDef = IndexDefinition(toJson("""{"file1": 2}"""), toJson("""{"name": "test"}"""))
+
+      val documentServiceClient = mock[DocumentServiceClient]
+
+      (documentServiceClient.createIndex _)
+        .expects("client", "tenant1", "type1", expectedIndexDef)
+        .returns(Future.successful(NotUsed))
+
+      val (source, sink) = TestSource.probe[RestoreTypeDefinition]
+        .via(createIndexes(documentServiceClient))
+        .toMat(TestSink.probe[RestoreTypeDefinition])(Keep.both)
+        .run()
+
+      // when
+      sink.request(10)
+
+      source
+        .sendNext(RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDef))))
+        .sendComplete()
+
+      // then
+      sink
+        .expectNext(RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDef))))
+        .expectComplete()
+    }
+
     "filter id index" in {
       // given
-      val indexDefinition = IndexDefinition(
-        parse("""{"_id": 1}""").getOrElse(Json.Null),
-        Json.Null
-      )
+      val indexDefinition = IndexDefinition(toJson("""{"_id": 1}"""), Json.Null)
 
       val documentServiceClient = stub[DocumentServiceClient]
 
@@ -241,10 +254,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .when("client", "tenant1", "type1", fileSource)
         .returns(Future.failed(new RuntimeException("some error")))
 
-      val indexDefinition = IndexDefinition(
-        parse("""{"file1": 1}""").getOrElse(Json.Null),
-        parse("""{"name": "test"}""").getOrElse(Json.Null)
-      )
+      val indexDefinition = IndexDefinition(toJson("""{"file1": 1}"""), toJson("""{"name": "test"}"""))
 
       val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
 
@@ -268,10 +278,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       //given
       val s = Source.repeat(InsertResult(1, 1, 0)).take(2001)
 
-      val indexDefinition = IndexDefinition(
-        parse("""{"file1": 1}""").getOrElse(Json.Null),
-        parse("""{"name": "test"}""").getOrElse(Json.Null)
-      )
+      val indexDefinition = IndexDefinition(toJson("""{"file1": 1}"""), toJson("""{"name": "test"}"""))
       val rdc = RestoreTypeDefinition("client", "tenant", "type", "a", Some(List(indexDefinition)))
 
       //when
@@ -288,11 +295,11 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
     }
   }
 
-
   private def generateJsons(n: Long) =
     Source
-      .repeat( """{a: "1"}""")
+      .repeat("""{a: "1"}""")
       .take(n)
       .runFold("")((acc, t) ⇒ acc ++ t)
+
 
 }

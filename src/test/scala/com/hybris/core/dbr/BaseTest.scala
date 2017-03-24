@@ -11,6 +11,8 @@
  */
 package com.hybris.core.dbr
 
+import io.circe.Json
+import io.circe.parser.parse
 import org.scalamock.scalatest.MockFactory
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
@@ -27,4 +29,6 @@ trait BaseTest
   with BeforeAndAfterAll {
 
   def randomName: String = Random.alphanumeric take 10 mkString
+
+  def toJson(s: String): Json = parse(s).getOrElse(Json.Null)
 }

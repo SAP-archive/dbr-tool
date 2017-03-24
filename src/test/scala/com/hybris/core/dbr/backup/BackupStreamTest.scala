@@ -20,9 +20,9 @@ import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.document.{DocumentBackupClient, DocumentServiceClient}
 import com.hybris.core.dbr.model._
+import io.circe.Decoder
 import io.circe.generic.semiauto._
 import io.circe.parser._
-import io.circe.{Decoder, _}
 
 import scala.concurrent.Future
 
@@ -91,14 +91,8 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
       val documentServiceClient = stub[DocumentServiceClient]
 
-      val indexDefinition1 = IndexDefinition(
-        parse("""{"number":1}""").getOrElse(Json.Null),
-        parse("""{"name":"number"}""").getOrElse(Json.Null)
-      )
-      val indexDefinition2 = IndexDefinition(
-        parse("""{"test":"text"}""").getOrElse(Json.Null),
-        parse("""{"name":"text"}""").getOrElse(Json.Null)
-      )
+      val indexDefinition1 = IndexDefinition(toJson("""{"number":1}"""), toJson("""{"name":"number"}"""))
+      val indexDefinition2 = IndexDefinition(toJson("""{"test":"text"}"""), toJson("""{"name":"text"}"""))
 
       (documentServiceClient.getIndexes _).when("client1", "tenant1", "type1").returns(Future.successful(List(indexDefinition1)))
       (documentServiceClient.getIndexes _).when("client1", "tenant1", "type2").returns(Future.successful(List(indexDefinition1, indexDefinition2)))
@@ -126,10 +120,7 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
 
       val documentServiceClient = stub[DocumentServiceClient]
 
-      val idIndexDefinition = IndexDefinition(
-        parse("""{"_id":1}""").getOrElse(Json.Null),
-        parse("""{"name":"new_id_index"}""").getOrElse(Json.Null)
-      )
+      val idIndexDefinition = IndexDefinition(toJson("""{"_id":1}"""), toJson("""{"name":"new_id_index"}"""))
 
       (documentServiceClient.getIndexes _).when("client", "tenant", "type").returns(Future.successful(List(idIndexDefinition)))
 
@@ -251,14 +242,8 @@ class BackupStreamTest extends BaseCoreTest with BackupStream {
     "write summary to file with index definition" in {
       val path = File.newTemporaryDirectory().pathAsString
 
-      val indexDefinition1 = IndexDefinition(
-        parse("""{ "_id": 1 }""").getOrElse(Json.Null),
-        parse("""{ "name":"_id_"}""").getOrElse(Json.Null)
-      )
-      val indexDefinition2 = IndexDefinition(
-        parse("""{ "test": "text" }""").getOrElse(Json.Null),
-        parse("""{ "name":"text" }""").getOrElse(Json.Null)
-      )
+      val indexDefinition1 = IndexDefinition(toJson("""{ "_id": 1 }"""), toJson("""{ "name":"_id_"}"""))
+      val indexDefinition2 = IndexDefinition(toJson("""{ "test": "text" }"""), toJson("""{ "name":"text" }"""))
 
       val (source, sink) = TestSource.probe[BackupTypeResult]
         .via(writeSummary(path, "summary.json"))
