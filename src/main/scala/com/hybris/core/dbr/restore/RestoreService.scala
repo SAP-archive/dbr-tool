@@ -21,14 +21,15 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class RestoreService(documentBackupClient: DocumentBackupClient,
                      documentServiceClient: DocumentServiceClient,
-                     restoreDir: String)
+                     restoreDir: String,
+                     skipIndexes: Boolean)
                     (implicit executionContext: ExecutionContext, materializer: Materializer)
   extends RestoreStream {
 
-  def restore(types: List[RestoreTypeDefinition], skipIndexes: Boolean): Future[Done] =
-    createGraph(types, skipIndexes).run()
+  def restore(types: List[RestoreTypeDefinition]): Future[Done] =
+    createGraph(types).run()
 
-  private def createGraph(types: List[RestoreTypeDefinition], skipIndexes: Boolean): RunnableGraph[Future[Done]] = {
+  private def createGraph(types: List[RestoreTypeDefinition]): RunnableGraph[Future[Done]] = {
     val typesSource = Source(types)
     val typesSourceWithIndexes = if (skipIndexes) typesSource else typesSource.via(createIndexes(documentServiceClient))
 

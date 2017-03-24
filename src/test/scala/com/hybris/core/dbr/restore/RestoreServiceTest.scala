@@ -11,10 +11,10 @@
 */
 package com.hybris.core.dbr.restore
 
-import akka.{Done, NotUsed}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
+import akka.{Done, NotUsed}
 import better.files.File
 import com.hybris.core.dbr.BaseCoreTest
 import com.hybris.core.dbr.config.RestoreTypeDefinition
@@ -25,12 +25,12 @@ import io.circe.parser.parse
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class RestoreServiceTest extends BaseCoreTest {
 
   implicit val materializer = ActorMaterializer()
-  implicit val ec = system.dispatcher
+  implicit val ec: ExecutionContext = system.dispatcher
 
   implicit val defaultPatience = PatienceConfig(timeout = Span(5, Seconds), interval = Span(250, Millis))
 
@@ -56,31 +56,31 @@ class RestoreServiceTest extends BaseCoreTest {
       //@formatter:off
       (documentBackupClient.insertDocuments _)
         .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
-            val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
+          val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
 
-            client == "client" &&
+          client == "client" &&
             tenant == "tenant" &&
             `type` == "type1" &&
             result == """{"a1":1}{"a2":2}"""
-          })
-        .returns(Future.successful(InsertResult(1,1,0)))
+        })
+        .returns(Future.successful(InsertResult(1, 1, 0)))
 
       (documentBackupClient.insertDocuments _)
         .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
-            val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
+          val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
 
-            client == "client" &&
+          client == "client" &&
             tenant == "tenant" &&
             `type` == "type2" &&
             result == """{"a3":1}"""
-          })
-        .returns(Future.successful(InsertResult(1,1,0)))
+        })
+        .returns(Future.successful(InsertResult(1, 1, 0)))
       //@formatter:on
 
-      val restoreService = new RestoreService(documentBackupClient, documentServiceClient, restoreDir.pathAsString)
+      val restoreService = new RestoreService(documentBackupClient, documentServiceClient, restoreDir.pathAsString, skipIndexes = true)
 
       // when
-      val result = restoreService.restore(types, skipIndexes = true).futureValue
+      val result = restoreService.restore(types).futureValue
 
       // then (+ mock expectations)
       result mustBe Done
@@ -101,24 +101,24 @@ class RestoreServiceTest extends BaseCoreTest {
       //@formatter:off
       (documentBackupClient.insertDocuments _)
         .expects(where { (client: String, tenant: String, `type`: String, documents: Source[ByteString, _]) ⇒
-            val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
+          val result = Await.result(documents.runWith(Sink.fold("")((acc, t) ⇒ acc.concat(t.utf8String))), 1 second)
 
-            client == "client" &&
+          client == "client" &&
             tenant == "tenant" &&
             `type` == "type1" &&
             result == """{"a1":1}{"a2":2}"""
-          })
-        .returns(Future.successful(InsertResult(1,1,0)))
+        })
+        .returns(Future.successful(InsertResult(1, 1, 0)))
 
       (documentServiceClient.createIndex _)
         .expects("client", "tenant", "type1", indexDefinition)
         .returns(Future.successful(NotUsed))
       //@formatter:on
 
-      val restoreService = new RestoreService(documentBackupClient, documentServiceClient, restoreDir.pathAsString)
+      val restoreService = new RestoreService(documentBackupClient, documentServiceClient, restoreDir.pathAsString, skipIndexes = false)
 
       // when
-      val result = restoreService.restore(types, skipIndexes = false).futureValue
+      val result = restoreService.restore(types).futureValue
 
       // then (+ mock expectations)
       result mustBe Done

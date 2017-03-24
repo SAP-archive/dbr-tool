@@ -26,8 +26,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 /**
- * Main class of backup tool.
- */
+  * Main class of backup tool.
+  */
 object Main extends App with Cli with FileConfig with AppConfig with LazyLogging {
 
   private def run(): Unit = {
@@ -120,9 +120,9 @@ object Main extends App with Cli with FileConfig with AppConfig with LazyLogging
         val documentBackupClient = new DefaultDocumentBackupClient(documentBackupUrl(cliConfig.env), token)
         val documentServiceClient = new DefaultDocumentServiceClient(documentServiceUrl(cliConfig.env), token)
 
-        val restoreService = new RestoreService(documentBackupClient, documentServiceClient, cliConfig.restoreSourceDir)
+        val restoreService = new RestoreService(documentBackupClient, documentServiceClient, cliConfig.restoreSourceDir, cliConfig.skipIndexes)
 
-        restoreService.restore(restoreDefinition.definitions, cliConfig.skipIndexes)
+        restoreService.restore(restoreDefinition.definitions)
       }
 
     result onComplete {
