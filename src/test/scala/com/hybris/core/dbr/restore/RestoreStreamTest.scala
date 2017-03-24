@@ -160,17 +160,26 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
 
     "create indexes" in {
       // given
-      val indexDefinition = IndexDefinition(
-        parse("""{"file1": 1}""").getOrElse(Json.Null),
+      val indexDefinition1 = IndexDefinition(
+        parse("""{"file1": 2}""").getOrElse(Json.Null),
+        parse("""{"name": "test"}""").getOrElse(Json.Null)
+      )
+      val indexDefinition2 = IndexDefinition(
+        parse("""{"file1": 2}""").getOrElse(Json.Null),
         parse("""{"name": "test"}""").getOrElse(Json.Null)
       )
 
-      val documentServiceClient = stub[DocumentServiceClient]
+      val documentServiceClient = mock[DocumentServiceClient]
+
       (documentServiceClient.createIndex _)
-        .when("client", "tenant1", "type1", indexDefinition)
+        .expects("client", "tenant1", "type1", indexDefinition1)
+        .returns(Future.successful(NotUsed))
+      (documentServiceClient.createIndex _)
+        .expects("client", "tenant1", "type2", indexDefinition2)
         .returns(Future.successful(NotUsed))
 
-      val rdc = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition)))
+      val rtd1 = RestoreTypeDefinition("client", "tenant1", "type1", "a", Some(List(indexDefinition1)))
+      val rtd2 = RestoreTypeDefinition("client", "tenant1", "type2", "a", Some(List(indexDefinition2)))
 
       val (source, sink) = TestSource.probe[RestoreTypeDefinition]
         .via(createIndexes(documentServiceClient))
@@ -181,14 +190,14 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
       sink.request(10)
 
       source
-        .sendNext(rdc)
-        .sendNext(rdc)
+        .sendNext(rtd1)
+        .sendNext(rtd2)
         .sendComplete()
 
       // then
       sink
-        .expectNext(rdc)
-        .expectNext(rdc)
+        .expectNext(rtd1)
+        .expectNext(rtd2)
         .expectComplete()
     }
 
@@ -220,7 +229,7 @@ class RestoreStreamTest extends BaseCoreTest with RestoreStream {
         .expectNext(rdc)
         .expectComplete()
 
-      (documentServiceClient.createIndex _ ).verify(*, *, * ,*).never() // index not created
+      (documentServiceClient.createIndex _).verify(*, *, *, *).never() // index not created
     }
 
     "fail when inserting document fails" in {
