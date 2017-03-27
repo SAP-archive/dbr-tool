@@ -13,7 +13,6 @@ package endtoend
 
 import akka.stream.ActorMaterializer
 import better.files.File
-import com.hybris.core.dbr.oauth.OAuthClient
 import com.hybris.core.dbr.{BaseCoreTest, Main}
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -25,7 +24,9 @@ class DocumentBackupToolTest extends BaseCoreTest {
 
   implicit val materializer = ActorMaterializer()
 
-  val `type` = "dbrTest"
+  val tenant = "framefrog"
+  val client = "framefrog.mycomicsshop"
+  val `type` = "dbrtest"
 
   /**
     * This is a suite of end-to-end tests.
@@ -35,25 +36,14 @@ class DocumentBackupToolTest extends BaseCoreTest {
   "Document Backup Restore tool" ignore {
 
     "backup data from US and restore in EU" in {
-
-      import DocumentServiceClient._
-
       // Set up
       val clientId = sys.env("CLIENT_ID")
       val clientSecret = sys.env("CLIENT_SECRET")
 
-      val scopes = List("hybris.document_view hybris.document_manage")
-      val usToken = new OAuthClient("https://api.us.yaas.io/hybris/oauth2/v1/token",
-        clientId,
-        clientSecret,
-        scopes).getToken.futureValue
+      val usClient = DocumentServiceClient("api.us.yaas.io", tenant, client, `type`, clientId, clientSecret)
+      val euClient = DocumentServiceClient("api.eu.yaas.io", tenant, client, `type`, clientId, clientSecret)
 
-      val euToken = new OAuthClient("https://api.eu.yaas.io/hybris/oauth2/v1/token",
-        clientId,
-        clientSecret,
-        scopes).getToken.futureValue
-
-      // Insert a document
+      // Create index and insert document to US
       val document =
         """{
           |	"i": 1,
@@ -66,108 +56,95 @@ class DocumentBackupToolTest extends BaseCoreTest {
           |	"b": true
           |}""".stripMargin
 
-      val usDocumentId = insertDocument("https://api.us.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`, document).futureValue
-
-      // Prepare config file
-      val testDir = File.newTemporaryDirectory()
-      val backupDir = testDir / "backup"
-      val configFileName = randomName
-
-      testDir / configFileName overwrite
-        s"""
-           |{
-           |  "tenants" : [
-           |    {
-           |      "tenant" : "framefrog",
-           |      "types" : ["${`type`}"]
-           |    }
-           |  ]
-           |}
-           |
+      val indexDefinition =
+        """
+          | {
+          |   "keys": {
+          |     "i": 1
+          |   },
+          |   "options": {
+          |     "name": "dbrTestIndex"
+          |   }
+          | }
         """.stripMargin
 
-      backupDir createDirectory
+      usClient.createIndex(indexDefinition).futureValue
+      val usDocumentId = usClient.insertDocument(document).futureValue
 
-      // Backup from us-prod
-      Main.main(Array("backup", "--env=us-prod", "--client=framefrog.mycomicsshop", s"--out=$backupDir", s"--config=${testDir / configFileName}"))
+      // Prepare config
+      val (testDir, backupDir, configFileName) = prepareConfig(tenant, `type`)
+
+      // Backup from US
+      Main.main(Array("backup", "--env=us-prod", "--client=" + client, s"--out=$backupDir", s"--config=${testDir / configFileName}"))
       Thread.sleep(3000)
 
-      // Restore to eu
+      // Restore to EU
       val backupTimestampDir = backupDir.list.toList.head
       Main.main(Array("restore", "--env=eu", s"--dir=$backupTimestampDir"))
       Thread.sleep(3000)
 
       // Verify the document in EU
-      val documentFromEu = getDocument("https://api.eu.yaas.io/hybris/document/v1", euToken, "framefrog", "framefrog.mycomicsshop", `type`, usDocumentId).futureValue
+      val documentFromEu = euClient.getDocument(usDocumentId).futureValue
+      val indexFromEuStatus = euClient.getIndex("dbrTestIndex").futureValue
 
       documentFromEu must include(usDocumentId)
+      indexFromEuStatus mustBe 200
 
       // Cleanup
-      deleteType("https://api.us.yaas.io/hybris/document/v1", usToken, "framefrog", "framefrog.mycomicsshop", `type`).futureValue
-      deleteType("https://api.eu.yaas.io/hybris/document/v1", euToken, "framefrog", "framefrog.mycomicsshop", `type`).futureValue
+      usClient.deleteType.futureValue
+      euClient.deleteType.futureValue
     }
 
     "create new dir with timestamp for backup" in {
       // given
-      val testDir = File.newTemporaryDirectory()
-      val backupDir = testDir / "backup"
-
-      val configFileName = randomName
-
-      testDir / configFileName overwrite
-        s"""
-           |{
-           |  "tenants" : [
-           |    {
-           |      "tenant" : "framefrog",
-           |      "types" : ["${`type`}"]
-           |    }
-           |  ]
-           |}
-           |
-        """.stripMargin
-
-      backupDir createDirectory
+      val (testDir, backupDir, configFileName) = prepareConfig(tenant, `type`)
 
       // when
-      Main.main(Array("backup", "--env=us-prod", "--client=framefrog.mycomicsshop", s"--out=$backupDir", s"--config=${testDir / configFileName}"))
+      Main.main(Array("backup", "--env=us-prod", "--client=" + client, s"--out=$backupDir", s"--config=${testDir / configFileName}"))
       Thread.sleep(1000)
 
       // then
       val backupDirFiles = backupDir.list.toList
       backupDirFiles.size mustBe 1
-      backupDirFiles.head.name must startWith ("backup-")
+      backupDirFiles.head.name must startWith("backup-")
     }
 
     "not clear backup directory" in {
       // given
-      val testDir = File.newTemporaryDirectory()
-      val backupDir = testDir / "backup"
-      val configFileName = randomName
-
-      testDir / configFileName overwrite
-        s"""
-           |{
-           |  "tenants" : [
-           |    {
-           |      "tenant" : "framefrog",
-           |      "types" : ["${`type`}"]
-           |    }
-           |  ]
-           |}
-           |
-        """.stripMargin
-
-      backupDir createDirectory
+      val (testDir, backupDir, configFileName) = prepareConfig(tenant, `type`)
 
       backupDir / "myFile.txt" overwrite "My file!"
 
       // when
-      Main.main(Array("backup", "--env=us-prod", "--client=framefrog.mycomicsshop", s"--out=$backupDir", s"--config=${testDir / configFileName}"))
+      Main.main(Array("backup", "--env=us-prod", "--client=" + client, s"--out=$backupDir", s"--config=${testDir / configFileName}"))
       Thread.sleep(10)
 
       // then
       (backupDir / "myFile.txt" exists) mustBe true
     }
   }
+
+  private def prepareConfig(tenant: String, `type`: String) = {
+    val testDir = File.newTemporaryDirectory()
+    val backupDir = testDir / "backup"
+    val configFileName = randomName
+
+    testDir / configFileName overwrite
+      s"""
+         |{
+         |  "tenants" : [
+         |    {
+         |      "tenant" : "$tenant",
+         |      "types" : ["${`type`}"]
+         |    }
+         |  ]
+         |}
+         |
+        """.stripMargin
+
+    backupDir createDirectory
+
+    (testDir, backupDir, configFileName)
+  }
+
 }
