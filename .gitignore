@@ -1,0 +1,11 @@
+.idea/
+*.iml
+.project
+.settings
+target/
+artifact/
+.gradle
+build/
+*.log
+tmp/
+project/project/
