@@ -1,4 +1,4 @@
-.idea
+.idea/
 *.iml
 .project
 .settings
@@ -8,3 +8,4 @@ artifact/
 build/
 *.log
 tmp/
+project/project/

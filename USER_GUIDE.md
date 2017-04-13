@@ -1,7 +1,6 @@
 # Document Service Backup Restore Tool
 
-Document Service Backup/Restore Tool, or simply `dbr`, allows to backup data from the Document Service 
-and restore data to the Document service. Backup operation reads your documents from the Document service
+Backup operation reads your documents from the Document service
 using the Document Backup service and writes them as extended JSONs to files in a designated directory. 
 This directory can be later used for restore process.
   
@@ -75,7 +74,7 @@ Additionally you can specify which types should be downloaded. If types are not 
 
 #### Indexes
 
-Along with backup of data, backup of indexes is done. To skip backup of indexes use `--skipIndexes`.
+Along with backup of data, the backup of indexes is done. To skip backup of indexes use `--skipIndexes`.
 
 #### Outcome 
 
@@ -113,13 +112,13 @@ $ bin/dbr restore --env us-prod --dir tmp/hybris_product_backup/backup-148855164
 
 #### Indexes
 
-Even if backup was done with indexes, you can skip restore of indexes. Similar to backup, to skip restore of indexes use `--skipIndexes`.
+Even if backup was done with indexes, you can skip restoration of indexes. Similar to backup, to skip restoration of indexes use `--skipIndexes`.
 
 #### Configuration
 
-The configuration for restore process contains a list of types to be imported into the Document Backup. 
+The configuration for restoration contains a list of types to be imported into the Document Backup. 
 Each type's configuration holds an information about a client, tenant, type name and file name where the documents are stored.
-You can manipulate this file in order to selectively restore selected types.
+You can manipulate this file in order to selectively restore particular types.
 
 ``` json
 [
@@ -133,7 +132,7 @@ You can manipulate this file in order to selectively restore selected types.
         "client" : "hybris.product",
         "tenant" : "marketplace",
         "type" : "variants",
-        "file" : "6ab630cd-0404-476b-bc99-89271c5b0792.json"
+        "file" : "6ab630cd-0404-476b-bc99-89271c5b0792.json",
         "indexes" : [
             {
                 "keys" : {
