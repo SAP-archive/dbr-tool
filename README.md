@@ -1,7 +1,7 @@
 # Document Service Backup Restore Tool
 
 The tool delivered to you to improve your experience with the
-<a href="https://market.yaas.io/beta/all/Persistence%2520(Beta)/9b174e06-9283-4c47-8d16-6eded2ac840a">
+<a href="https://market.yaas.io/beta/all/Persistence/5a3a4804-cd90-45b9-ad6b-afaac7d5d13d">
 Persistence package</a> components. The Document service backup and restore tool, simply `dbr`, allows to backup data along with the indexes from the
 <a href="https://devportal.yaas.io/services/beta/document/latest/">Document service </a>and restore the data to
 the Document service.
