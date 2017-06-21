@@ -1,17 +1,18 @@
 # Document Service Backup Restore Tool
 
 Backup operation reads your documents from the Document service
-using the Document Backup service and writes them as extended JSONs to files in a designated directory. 
+using the Document Backup service and writes them as extended JSONs to files in a designated directory.
 This directory can be later used for restore process.
-  
-Both operations have an option to choose an environment. `dbr` supports all available environments 
-(__us-prod__, __us-stage__, __eu__). With this, it is possible to migrate data from one environment to another.
-     
-Documents are being inserted as they are written in the backup files with all metadata and data types preserved. 
+
+Both operations have an option to choose an environment. `dbr` supports all available environments
+(__us-prod__, __us-stage__, __beta__, __eu__). With this, it is possible to migrate data from one environment to another.
+Please note that both __beta__ and __us-prod__ are exactly the same environments. 
+
+Documents are being inserted as they are written in the backup files with all metadata and data types preserved.
 
 ## Usage
 
-After unzipping the tool, you should get the following directory structure: 
+After unzipping the tool, you should get the following directory structure:
 
 ```
 .
@@ -24,7 +25,7 @@ After unzipping the tool, you should get the following directory structure:
 ```
 
 In the following steps you'll be using `bin/dbr` tool to backup and restore.
-In case you get `permission denied: bin/dbr`, just `chmod +x bin/dbr`. 
+In case you get `permission denied: bin/dbr`, just `chmod +x bin/dbr`.
 
 ### Backup
 
@@ -34,9 +35,9 @@ The backup reads documents from the Document Backup service and stores them in f
 $ bin/dbr backup --env <env> --client <client> --config <config_file> --out <destination_dir>
 ```
 
-Parameters: 
- 
--	`env` - Name of an environment, possible values: us-prod, us-stage, eu.
+Parameters:
+
+-	`env` - Name of an environment, possible values: us-prod, us-stage, eu, beta.
 -	`client` - Name of the client for whom the operation is performed.
 -	`config` - File you have to create manually before the backup. It contains configuration where tenants and types are listed. For more information on the structure of config file, see the next section.
 -	`out` - Destination directory where output files will be stored. Every backup operation creates a new directory in `out` directory with the following naming convention: `backup-TIMESTAMP`.
@@ -55,7 +56,7 @@ $ bin/dbr backup --env us-prod  --client hybris.product --config config.json --o
 
 #### Configuration file
 
-The configuration file for backup contains a list of tenants to be downloaded. You have to create it manually before backup. 
+The configuration file for backup contains a list of tenants to be downloaded. You have to create it manually before backup.
 Additionally you can specify which types should be downloaded. If types are not provided, then all of them will be included.
 
 
@@ -66,7 +67,7 @@ Additionally you can specify which types should be downloaded. If types are not 
 			"tenant" : "marketplace", "types" : ["products", "variants"]
 		},
 		{
-			"tenant" : "marketdemo" 
+			"tenant" : "marketdemo"
 		}
 	]
 }
@@ -76,27 +77,27 @@ Additionally you can specify which types should be downloaded. If types are not 
 
 Along with backup of data, the backup of indexes is done. To skip backup of indexes use `--skipIndexes`.
 
-#### Outcome 
+#### Outcome
 
-The outcome of backup is a set of files in the destination directory. Every type is stored in a separate file as an array of extended JSONs. 
+The outcome of backup is a set of files in the destination directory. Every type is stored in a separate file as an array of extended JSONs.
 The main file `backup.json` is a backup summary generated automatically during backup with details about the performed operations.  
 
 ### Restore
 
-The restore operation imports data from files into the Document Backup service. The input for this operation is 
-the backup's destination directory which includes the configuration file called `backup.json` (it's backup's summary file) 
-as well as files with data in form of `UUID.json`. 
-If you want to restore only a part of the data (e.g. some selected types), you can limit the input by editing the `backup.json`. 
+The restore operation imports data from files into the Document Backup service. The input for this operation is
+the backup's destination directory which includes the configuration file called `backup.json` (it's backup's summary file)
+as well as files with data in form of `UUID.json`.
+If you want to restore only a part of the data (e.g. some selected types), you can limit the input by editing the `backup.json`.
 More information on the `backup.json` file can be found in the Configuration section.
 
 ``` bash
 $ bin/dbr restore --env <env> --dir <source_dir>
 ```
 
-Parameters: 
- 
+Parameters:
+
 -	`env` - Name of an environment, possible values: us-prod, us-stage, eu.
--	`dir` - Source directory with files containing the data. 
+-	`dir` - Source directory with files containing the data.
 - 	`skipIndexes` - Skips restore of indexes
 
 Restore requires `CLIENT_ID` and `CLIENT_SECRET` environment variable to be set with appropriate auth credentials for getting access token.
@@ -116,7 +117,7 @@ Even if backup was done with indexes, you can skip restoration of indexes. Simil
 
 #### Configuration
 
-The configuration for restoration contains a list of types to be imported into the Document Backup. 
+The configuration for restoration contains a list of types to be imported into the Document Backup.
 Each type's configuration holds an information about a client, tenant, type name and file name where the documents are stored.
 You can manipulate this file in order to selectively restore particular types.
 
@@ -143,7 +144,7 @@ You can manipulate this file in order to selectively restore particular types.
                 }
             }
         ]
-        
+
     }
 ]
 ````
