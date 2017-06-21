@@ -6,7 +6,7 @@ This directory can be later used for restore process.
 
 Both operations have an option to choose an environment. `dbr` supports all available environments
 (__us-prod__, __us-stage__, __beta__, __eu__). With this, it is possible to migrate data from one environment to another.
-You will notice that __beta__ and __us-prod__ are exactly the same environment. 
+Please note that both __beta__ and __us-prod__ are exactly the same environments. 
 
 Documents are being inserted as they are written in the backup files with all metadata and data types preserved.
 
